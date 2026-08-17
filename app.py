@@ -644,8 +644,80 @@ st.markdown("""
         color: #dc3545 !important;
         font-size: 0.1rem !important;
     }
+    /* הגדרת סמן יד לכל המרכיבים של תיבת התאריך */
+    div[data-testid="stDateInput"] > div,
+    div[data-testid="stDateInput"] input,
+    div[role="dialog"] div[data-testid="stDateInput"] > div,
+    div[role="dialog"] div[data-testid="stDateInput"] input {
+        cursor: pointer !important;
+        transition: all 0.2s ease-in-out !important;
+        border-radius: 8px !important;
+    }
+    /* אפקט ריחוף בדיוק כמו בשדות הבחירה */
+    div[data-testid="stDateInput"]:hover > div > div,
+    div[role="dialog"] div[data-testid="stDateInput"]:hover > div > div {
+        border-color: #1976d2 !important;
+        box-shadow: 0 0 8px rgba(25, 118, 210, 0.25) !important;
+    }
     </style>
 """, unsafe_allow_html=True)
+
+#------------------------------------------------------
+# פונקציות וקטעי קוד שצריך שיהיו בתחילת הקוד 
+#------------------------------------------------------
+
+MONTH_TO_NUM = {
+    "January": 1, "February": 2, "March": 3, "April": 4, 
+    "May": 5, "June": 6, "July": 7, "August": 8, 
+    "September": 9, "October": 10, "November": 11, "December": 12
+}
+NUM_TO_MONTH = {v: k for k, v in MONTH_TO_NUM.items()}
+
+country_emojis = {
+                "Afghanistan": "🇦🇫", "Albania": "🇦🇱", "Algeria": "🇩🇿", "Andorra": "🇦🇩", "Angola": "🇦🇴", 
+                "Antigua and Barbuda": "🇦🇬", "Argentina": "🇦🇷", "Armenia": "🇦🇲", "Australia": "🇦🇺", 
+                "Austria": "🇦🇹", "Azerbaijan": "🇦🇿", "Bahamas": "🇧🇸", "Bahrain": "🇧🇭", "Bangladesh": "🇧🇩", 
+                "Barbados": "🇧🇧", "Belarus": "🇧🇾", "Belgium": "🇧🇪", "Belize": "🇧🇿", "Benin": "🇧🇯", 
+                "Bhutan": "🇧🇹", "Bolivia": "🇧🇴", "Bosnia and Herzegovina": "🇧🇦", "Botswana": "🇧🇼", 
+                "Brazil": "🇧🇷", "Brunei": "🇧🇳", "Bulgaria": "🇧🇬", "Burkina Faso": "🇧🇫", "Burundi": "🇧🇮", 
+                "Cabo Verde": "🇨🇻", "Cambodia": "🇰🇭", "Cameroon": "🇨🇲", "Canada": "🇨🇦", 
+                "Central African Republic": "🇨🇫", "Chad": "🇹🇩", "Chile": "🇨🇱", "China": "🇨🇳", 
+                "Colombia": "🇨🇴", "Comoros": "🇰🇲", "Congo": "🇨🇬", "Costa Rica": "🇨🇷", "Croatia": "🇭🇷", 
+                "Cuba": "🇨🇺", "Cyprus": "🇨🇾", "Czechia": "🇨🇿", "Denmark": "🇩🇰", "Djibouti": "🇩🇯", 
+                "Dominica": "🇩🇲", "Dominican Republic": "🇩🇴", "Ecuador": "🇪🇨", "Egypt": "🇪🇬", 
+                "El Salvador": "🇸🇻", "Equatorial Guinea": "🇬🇶", "Eritrea": "🇪🇷", "Estonia": "🇪🇪", 
+                "Eswatini": "🇸🇿", "Ethiopia": "🇪🇹", "Fiji": "🇫🇯", "Finland": "🇫🇮", "France": "🇫🇷", 
+                "Gabon": "🇬🇦", "Gambia": "🇬🇲", "Georgia": "🇬🇪", "Germany": "🇩🇪", "Ghana": "🇬🇭", 
+                "Greece": "🇬🇷", "Grenada": "🇬🇩", "Guatemala": "🇬🇹", "Guinea": "🇬🇳", "Guinea-Bissau": "🇬🇼", 
+                "Guyana": "🇬🇾", "Haiti": "🇭🇹", "Honduras": "🇭🇳", "Hungary": "🇭🇺", "Iceland": "🇮🇸", 
+                "India": "🇮🇳", "Indonesia": "🇮🇩", "Iran": "🇮🇷", "Iraq": "🇮🇶", "Ireland": "🇮🇪", 
+                "Israel": "🇮🇱", "Italy": "🇮🇹", "Jamaica": "🇯🇲", "Japan": "🇯🇵", "Jordan": "🇯🇴", 
+                "Kazakhstan": "🇰🇿", "Kenya": "🇰🇪", "Kiribati": "🇰🇮", "Kuwait": "🇰🇼", "Kyrgyzstan": "🇰🇬", 
+                "Laos": "🇱🇦", "Latvia": "🇱🇻", "Lebanon": "🇱🇧", "Lesotho": "🇱🇸", "Liberia": "🇱🇷", 
+                "Libya": "🇱🇾", "Liechtenstein": "🇱🇮", "Lithuania": "🇱🇹", "Luxembourg": "🇱🇺", 
+                "Madagascar": "🇲🇬", "Malawi": "🇲🇼", "Malaysia": "🇲🇾", "Maldives": "🇲🇻", "Mali": "🇲🇱", 
+                "Malta": "🇲🇹", "Marshall Islands": "🇲🇭", "Mauritania": "🇲🇷", "Mauritius": "🇲🇺", 
+                "Mexico": "🇲🇽", "Micronesia": "🇫🇲", "Moldova": "🇲🇩", "Monaco": "🇲🇨", "Mongolia": "🇲🇳", 
+                "Montenegro": "🇲🇪", "Morocco": "🇲🇦", "Mozambique": "🇲🇿", "Myanmar": "🇲🇲", "Namibia": "🇳🇦", 
+                "Nauru": "🇳🇷", "Nepal": "🇳🇵", "Netherlands": "🇳🇱", "New Zealand": "🇳🇿", "Nicaragua": "🇳🇮", 
+                "Niger": "🇳🇪", "Nigeria": "🇳🇬", "North Korea": "🇰🇵", "North Macedonia": "🇲🇰", "Norway": "🇳🇴", 
+                "Oman": "🇴🇲", "Pakistan": "🇵🇰", "Palau": "🇵🇼", "Palestine": "🇵🇸", "Panama": "🇵🇦", 
+                "Papua New Guinea": "🇵🇬", "Paraguay": "🇵🇾", "Peru": "🇵🇪", "Philippines": "🇵🇭", 
+                "Poland": "🇵🇱", "Portugal": "🇵🇹", "Qatar": "🇶🇦", "Romania": "🇷🇴", "Russia": "🇷🇺", 
+                "Rwanda": "🇷🇼", "Saint Kitts and Nevis": "🇰🇳", "Saint Lucia": "🇱🇨", 
+                "Saint Vincent and the Grenadines": "🇻🇨", "Samoa": "🇼🇸", "San Marino": "🇸🇲", 
+                "Sao Tome and Principe": "🇸🇹", "Saudi Arabia": "🇸🇦", "Senegal": "🇸🇳", "Serbia": "🇷🇸", 
+                "Seychelles": "🇸🇨", "Sierra Leone": "🇸🇱", "Singapore": "🇸🇬", "Slovakia": "🇸🇰", 
+                "Slovenia": "🇸🇮", "Solomon Islands": "🇸🇧", "Somalia": "🇸🇴", "South Africa": "🇿🇦", 
+                "South Korea": "🇰🇷", "South Sudan": "🇸🇸", "Spain": "🇪🇸", "Sri Lanka": "🇱🇰", 
+                "Sudan": "🇸🇩", "Suriname": "🇸🇷", "Sweden": "🇸🇪", "Switzerland": "🇨🇭", "Syria": "🇸🇾", 
+                "Taiwan": "🇹🇼", "Tajikistan": "🇹🇯", "Tanzania": "🇹🇿", "Thailand": "🇹🇭", "Timor-Leste": "🇹🇱", 
+                "Togo": "🇹🇬", "Tonga": "🇹🇴", "Trinidad and Tobago": "🇹🇹", "Tunisia": "🇹🇳", "Turkey": "🇹🇷", 
+                "Turkmenistan": "🇹🇲", "Tuvalu": "🇹🇻", "Uganda": "🇺🇬", "Ukraine": "🇺🇦", 
+                "United Arab Emirates": "🇦🇪", "United Kingdom": "🇬🇧", "United States": "🇺🇸", 
+                "Uruguay": "🇺🇾", "Uzbekistan": "🇺🇿", "Vanuatu": "🇻🇺", "Vatican City": "🇻🇦", 
+                "Venezuela": "🇻🇪", "Vietnam": "🇻🇳", "Yemen": "🇾🇪", "Zambia": "🇿🇲", "Zimbabwe": "🇿🇼"
+            }
 
 @st.dialog("Delete Account")
 def delete_user_dialog(username, config_data):
@@ -719,6 +791,9 @@ def edit_user_profile_dialog(username, config_data):
             st.success("Profile updated successfully!")
             st.rerun()
 
+#------------------------------------------------------
+# אתחול מערכת ההזדהות
+#------------------------------------------------------
 with open('config.yaml', encoding='utf-8') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
@@ -840,14 +915,8 @@ elif st.session_state.get('authentication_status') == True:
     # ----------------------------------------------------
     # ניהול שמירה וטעינה של נתונים (JSON)
     # ----------------------------------------------------
-    PROJECTS_FILE = "projects.json"
 
-    MONTH_TO_NUM = {
-        "January": 1, "February": 2, "March": 3, "April": 4, 
-        "May": 5, "June": 6, "July": 7, "August": 8, 
-        "September": 9, "October": 10, "November": 11, "December": 12
-    }
-    NUM_TO_MONTH = {v: k for k, v in MONTH_TO_NUM.items()}
+    PROJECTS_FILE = "projects.json"
 
     def load_projects():
         path = st.session_state.projects_file
@@ -863,7 +932,7 @@ elif st.session_state.get('authentication_status') == True:
     def delete_project_data(project_id):
         project_folder = f"{user_data_dir}/project_{project_id}"
         if os.path.exists(project_folder):
-            shutil.rmtree(project_folder) # מוחק את התיקייה וכל הקבצים שבתוכה בפקודה אחת
+            shutil.rmtree(project_folder) 
             
         st.session_state.projects = [p for p in st.session_state.projects if p["id"] != project_id]
         save_projects(st.session_state.projects)
@@ -1385,7 +1454,7 @@ elif st.session_state.get('authentication_status') == True:
         actual_month = NUM_TO_MONTH[selected_date.month]
         actual_year = int(selected_date.year)
 
-        item_name = st.text_input("Description (e.g., Groceries, Salary, Entertainment)")
+        item_name = st.text_input("Description (e.g., Groceries, Salary, Entertainment) - OPTIONAL")
         amount = st.number_input("Amount (ILS)", value=None, placeholder="Enter Amount...", min_value=0.0, step=1.0)
         item_type = st.selectbox("Type:", ["Expense", "Income"])
         
@@ -1450,14 +1519,16 @@ elif st.session_state.get('authentication_status') == True:
             category = st.selectbox("Category:", expense_categories if expense_categories else ["General Expense"])
         
         if st.button("Add Transaction", use_container_width=True, type="primary"):
-            if item_name and amount is not None and amount > 0:
+            if amount is not None and amount > 0:
                 chosen_day = int(selected_date.day)
                 chosen_month_str = NUM_TO_MONTH[selected_date.month]
                 chosen_year = int(selected_date.year)
+
+                final_item_name = item_name.strip() if item_name and item_name.strip() else "..."
                 
                 new_row = pd.DataFrame([{
                     "day": chosen_day,
-                    "Description": item_name,
+                    "Description": final_item_name,
                     "Amount": amount,
                     "Type": item_type,
                     "Category": category,
@@ -1470,7 +1541,7 @@ elif st.session_state.get('authentication_status') == True:
                 st.success(f"Added successfully for {selected_date.strftime('%d/%m/%Y')}!")
                 st.rerun()
             else:
-                st.error("Please enter a valid description and amount.")
+                st.error("Please enter a valid amount.")
 
     @st.dialog("Edit Transaction")
     def edit_transaction_dialog(txs_file, tx_id, current_data, project_cats_file, income_cats_file):
@@ -1633,20 +1704,57 @@ elif st.session_state.get('authentication_status') == True:
 
     @st.dialog("⚙️ Edit Trip Settings")
     def edit_trip_settings_dialog(vac_meta):
+        st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)
+
         current_start = datetime.strptime(vac_meta.get("start_date", str(date.today())), "%Y-%m-%d").date()
         current_end = datetime.strptime(vac_meta.get("end_date", str(date.today())), "%Y-%m-%d").date()
         current_travelers = int(vac_meta.get("travelers", 2))
         current_budget = float(vac_meta.get("budget", 10000.0))
+        
+        selected_countries = vac_meta.get("countries", [])
+        if not selected_countries and "country" in vac_meta and vac_meta["country"] != "Select Country...":
+            selected_countries = [vac_meta["country"]]
 
         with st.form("edit_trip_form"):
             st.markdown("Update your trip logistics and dates:")
             
-            d_col1, d_col2 = st.columns(2)
-            with d_col1:
-                new_start = st.date_input("Start Date", value=current_start)
-            with d_col2:
-                new_end = st.date_input("End Date", value=current_end)
+            if len(selected_countries) == 1:
+                trip_dates = st.date_input("🗓️ Trip Dates (Start & End)", value=(current_start, current_end))
+            else:
+                st.markdown("---")
+                st.markdown("##### 🗺️ Trip Segments:")
+                
+                existing_segments = vac_meta.get("segments", [{"start": str(current_start), "end": str(current_end), "country": selected_countries[0]}])
+                
+                if f"edit_num_segments_{current_project['id']}" not in st.session_state:
+                    st.session_state[f"edit_num_segments_{current_project['id']}"] = len(existing_segments)
+                
+                num_segs = st.session_state[f"edit_num_segments_{current_project['id']}"]
+                updated_segments = []
+                
+                for s in range(num_segs):
+                    default_seg = existing_segments[s] if s < len(existing_segments) else existing_segments[-1]
+                    s_def_start = datetime.strptime(default_seg["start"], "%Y-%m-%d").date()
+                    s_def_end = datetime.strptime(default_seg["end"], "%Y-%m-%d").date()
+                    s_def_c = default_seg["country"]
+                    if s_def_c not in selected_countries:
+                        s_def_c = selected_countries[0]
+                    c_idx = selected_countries.index(s_def_c)
 
+                    st.markdown(f"**Segment {s+1}**")
+                    s_col1, s_col2 = st.columns([2, 1])
+                    with s_col1:
+                        seg_dates = st.date_input(f"Dates (Segment {s+1})", value=(s_def_start, s_def_end), key=f"edit_seg_dates_{s}")
+                    with s_col2:
+                        s_country = st.selectbox(f"Country", options=selected_countries, index=c_idx, key=f"edit_seg_country_{s}")
+                    
+                    updated_segments.append({"dates": seg_dates, "country": s_country})
+
+                if st.form_submit_button("➕ Add Another Segment"):
+                    st.session_state[f"edit_num_segments_{current_project['id']}"] += 1
+                    st.rerun()
+
+            st.markdown("---")
             t_col1, t_col2 = st.columns(2)
             with t_col1:
                 new_travelers = st.number_input("Number of Travelers", min_value=1, value=current_travelers, step=1)
@@ -1654,17 +1762,72 @@ elif st.session_state.get('authentication_status') == True:
                 new_budget = st.number_input("Total Budget (ILS)", min_value=0.0, value=current_budget, step=500.0)
 
             if st.form_submit_button("Save Changes 💾", use_container_width=True, type="primary"):
-                vac_meta["start_date"] = str(new_start)
-                vac_meta["end_date"] = str(new_end)
-                vac_meta["travelers"] = new_travelers
-                vac_meta["budget"] = new_budget
-                
-                curr_nav = datetime.strptime(vac_meta.get("current_trip_date", str(new_start)), "%Y-%m-%d").date()
-                if curr_nav < new_start or curr_nav > new_end:
-                    vac_meta["current_trip_date"] = str(new_start)
+                if len(selected_countries) == 1:
+                    if len(trip_dates) < 2:
+                        st.error("Please select BOTH a start and end date.")
+                        st.stop()
+                    new_start, new_end = trip_dates[0], trip_dates[1]
+                    vac_meta["segments"] = [{"start": str(new_start), "end": str(new_end), "country": selected_countries[0]}]
+                else:
+                    if not updated_segments:
+                        st.error("Please define at least one segment.")
+                        st.stop()
+                    
+                    final_segments = []
+                    all_starts, all_ends = [], []
+                    for seg in updated_segments:
+                        if len(seg["dates"]) < 2:
+                            st.error("Please select BOTH a start and end date for all segments.")
+                            st.stop()
+                        s_st, s_en = seg["dates"][0], seg["dates"][1]
+                        final_segments.append({"start": str(s_st), "end": str(s_en), "country": seg["country"]})
+                        all_starts.append(s_st)
+                        all_ends.append(s_en)
+                        
+                    new_start = min(all_starts)
+                    new_end = max(all_ends)
+                    vac_meta["segments"] = final_segments
 
-                save_vacation_meta(vac_meta)
-                st.rerun()
+                if new_start > new_end:
+                    st.error("Start date cannot be after end date.")
+                else:
+                    vac_meta["start_date"] = str(new_start)
+                    vac_meta["end_date"] = str(new_end)
+                    vac_meta["travelers"] = new_travelers
+                    vac_meta["budget"] = new_budget
+                    
+                    if "days_metadata" not in vac_meta:
+                        vac_meta["days_metadata"] = {}
+
+                    if len(selected_countries) == 1:
+                        single_c = selected_countries[0]
+                        curr = new_start
+                        while curr <= new_end:
+                            d_key = str(curr)
+                            if d_key not in vac_meta["days_metadata"]:
+                                vac_meta["days_metadata"][d_key] = {}
+                            vac_meta["days_metadata"][d_key]["country"] = single_c
+                            curr += dt.timedelta(days=1)
+                    else:
+                        for seg in vac_meta["segments"]:
+                            s_dt = datetime.strptime(seg["start"], "%Y-%m-%d").date()
+                            e_dt = datetime.strptime(seg["end"], "%Y-%m-%d").date()
+                            c_name = seg["country"]
+                            
+                            curr = s_dt
+                            while curr <= e_dt:
+                                d_key = str(curr)
+                                if d_key not in vac_meta["days_metadata"]:
+                                    vac_meta["days_metadata"][d_key] = {}
+                                vac_meta["days_metadata"][d_key]["country"] = c_name
+                                curr += dt.timedelta(days=1)
+
+                    curr_nav = datetime.strptime(vac_meta.get("current_trip_date", str(new_start)), "%Y-%m-%d").date()
+                    if curr_nav < new_start or curr_nav > new_end:
+                        vac_meta["current_trip_date"] = str(new_start)
+
+                    save_vacation_meta(vac_meta)
+                    st.rerun()
 
     @st.dialog("➕ Add New Attraction")
     def add_attraction_dialog(v_meta, day_key):
@@ -1673,10 +1836,10 @@ elif st.session_state.get('authentication_status') == True:
             new_name = st.text_input("🎯 Attraction Name (e.g. Arakura Sengen Shrine)")
             
             c_time, c_dur = st.columns(2)
-            start_time = c_time.time_input("Start Time", value=datetime.strptime("10:00:00", "%H:%M:%S").time())
-            duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.5, max_value=12.0, value=2.0, step=0.5)
+            start_time = c_time.time_input("Start Time (Required)", value=None, help="Please select a time for this attraction")
+            duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.0, max_value=24.0, value=1.0, step=0.25)
             
-            new_coords_str = st.text_input("📍 Google Maps Coordinates (e.g. 35.5013, 138.8023)")
+            new_coords_str = st.text_input("📍 Location")
             
             new_budget = st.number_input("💰 Budget (₪)", min_value=0, value=0, step=50)
             new_notes = st.text_area("📝 Notes")
@@ -1716,7 +1879,7 @@ elif st.session_state.get('authentication_status') == True:
             start_time = c_time.time_input("Start Time", value=def_time)
             duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.5, max_value=12.0, value=float(item.get('duration', 2.0)), step=0.5)
             
-            new_coords_str = st.text_input("📍 Google Maps Coordinates", value=item.get('coords', ''))
+            new_coords_str = st.text_input("📍 Location", value=item.get('coords', ''))
             
             new_budget = st.number_input("💰 Budget (₪)", min_value=0, value=int(item.get('budget', 0)), step=50)
             new_notes = st.text_area("📝 Notes", value=item.get('notes', ''))
@@ -1817,13 +1980,34 @@ elif st.session_state.get('authentication_status') == True:
         for proj in st.session_state.projects:
             is_active = (proj["id"] == st.session_state.selected_project_id)
             
-            icons = {
-                "Monthly Cash Flow Management": "📊",
-                "Vacation Planner": "✈️",
-                "Hourly Wage Tracker": "💰",
-                "Goal-Based Savings": "🎯"
-            }
-            icon = icons.get(proj["type"], "📁")
+            icon = "📁" 
+            if proj["type"] == "Vacation Planner":
+                v_folder = f"{user_data_dir}/project_{proj['id']}"
+                vacation_meta_file = f"{v_folder}/vacation_meta.json"
+                
+                if os.path.exists(vacation_meta_file):
+                    with open(vacation_meta_file, "r", encoding="utf-8") as f:
+                        vac_meta = json.load(f)
+                        
+                        countries = vac_meta.get("countries", [])
+                        if not countries and "country" in vac_meta and vac_meta["country"] != "Select Country...":
+                            countries = [vac_meta["country"]]
+                        
+                        if len(countries) == 1:
+                            icon = country_emojis.get(countries[0], "✈️")
+                        elif len(countries) > 1:
+                            icon = "🌍"
+                        else:
+                            icon = "✈️"
+                else:
+                    icon = "✈️"
+            else:
+                icons = {
+                    "Monthly Cash Flow Management": "📊",
+                    "Hourly Wage Tracker": "💰",
+                    "Goal-Based Savings": "🎯"
+                }
+                icon = icons.get(proj["type"], "📁")
             
             clean_name = proj["name"]
             short_name = clean_name[:16] + "..." if len(clean_name) > 16 else clean_name
@@ -2359,7 +2543,7 @@ elif st.session_state.get('authentication_status') == True:
                 st.info("No transactions file found.")
 
         # ------------------------------------------------
-        # מודול 2: תכנון חופשה
+        # מודול 2: תכנון חופשה (עם תמיכה במקטעים מרובי מדינות)
         # ------------------------------------------------
         elif current_project["type"] == "Vacation Planner":
             vacation_folder = f"{project_folder}"
@@ -2452,49 +2636,60 @@ elif st.session_state.get('authentication_status') == True:
                 "Venezuela": "🇻🇪", "Vietnam": "🇻🇳", "Yemen": "🇾🇪", "Zambia": "🇿🇲", "Zimbabwe": "🇿🇼"
             }
 
-            countries_with_placeholder = ["Select Country..."] + countries_list
-            selected_country = vac_meta.get("country", "Select Country...")
+            selected_countries = vac_meta.get("countries", [])
+            if not selected_countries and "country" in vac_meta and vac_meta["country"] != "Select Country...":
+                selected_countries = [vac_meta["country"]]
 
-            if selected_country == "Select Country...":
+            #-------------------------------------
+            # שלב א': בחירת מדינות לחופשה
+            #-------------------------------------
+
+            if not selected_countries:
                 st.markdown("""
                     <div style='text-align: center; margin-top: 40px; margin-bottom: 30px;'>
                         <h2 style='font-size: 2.8rem; font-weight: 800;'>✈️ Planning a New Adventure? 🌴</h2>
-                        <p style='font-size: 1.2rem; color: #6c757d;'>Select your destination and let's build the ultimate itinerary.</p>
+                        <p style='font-size: 1.2rem; color: #6c757d;'>Select destination country or countries for this trip.</p>
                     </div>
                 """, unsafe_allow_html=True)
 
                 col_space1, col_center, col_space2 = st.columns([1, 2, 1])
                 with col_center:
-                    chosen_country = st.selectbox(
+                    chosen_countries = st.multiselect(
                         "Where are we flying to?",
-                        options=countries_with_placeholder,
-                        index=0,
-                        key=f"country_select_{current_project['id']}"
+                        options=countries_list,
+                        key=f"countries_multiselect_{current_project['id']}"
                     )
                     
                     st.write("")
-                    if st.button("Set Destination & Continue 🚀", use_container_width=True, type="primary"):
-                        if chosen_country == "Select Country...":
-                            st.error("Please select a valid destination country first.")
+                    if st.button("Set Destinations & Continue 🚀", use_container_width=True, type="primary"):
+                        if not chosen_countries:
+                            st.error("Please select at least one destination country.")
                         else:
-                            vac_meta["country"] = chosen_country
+                            vac_meta["countries"] = chosen_countries
                             save_vacation_meta(vac_meta)
                             st.rerun()
 
+            #-----------------------------------------
+            # שלב ב': הגדרת תאריכים ותקציב
+            #-----------------------------------------
+
             elif "start_date" not in vac_meta or "end_date" not in vac_meta:
-                flag_emoji = country_emojis.get(selected_country, "🌍")
+                countries_str = ", ".join(selected_countries)
 
                 st.markdown(f"""
                     <div style='text-align: center; margin-top: 20px; margin-bottom: 30px;'>
-                        <div style='font-size: 10rem; line-height: 1; margin-bottom: 15px;'>{flag_emoji}</div>
-                        <h1 style='margin: 0; font-size: 4.5rem; font-weight: 900; letter-spacing: 3px;'>{selected_country.upper()}</h1>
+                        <h1 style='margin: 0; font-size: 3rem; font-weight: 900; letter-spacing: 2px;'>🌍 {countries_str.upper()}</h1>
                     </div>
                 """, unsafe_allow_html=True)
 
                 col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
                 with col_b2:
-                    if st.button("🔄 Change Country", use_container_width=True, type="secondary"):
-                        vac_meta["country"] = "Select Country..."
+                    if st.button("🔄 Change Countries", use_container_width=True, type="secondary"):
+                        vac_meta["countries"] = []
+                        if "country" in vac_meta:
+                            del vac_meta["country"]
+                        if "segments" in vac_meta:
+                            del vac_meta["segments"]
                         save_vacation_meta(vac_meta)
                         st.rerun()
 
@@ -2503,37 +2698,107 @@ elif st.session_state.get('authentication_status') == True:
                 st.markdown("<h4 style='margin-bottom: 15px; text-align: center;'>Trip Parameters & Logistics</h4>", unsafe_allow_html=True)
 
                 with st.form(f"vacation_details_form_{current_project['id']}"):
-                    col_dates1, col_dates2 = st.columns(2)
-                    with col_dates1:
-                        start_date = st.date_input("Start Date", value=date.today())
-                    with col_dates2:
-                        end_date = st.date_input("End Date", value=date.today())
-
+                    if len(selected_countries) == 1:
+                        trip_dates = st.date_input("🗓️ Trip Dates (Start & End)", value=(date.today(), date.today() + dt.timedelta(days=1)))
+                    
                     col_det1, col_det2 = st.columns(2)
                     with col_det1:
                         travelers_count = st.number_input("Number of Travelers", min_value=1, value=2, step=1)
                     with col_det2:
                         total_budget = st.number_input("Total Budget (ILS)", min_value=0.0, value=10000.0, step=500.0)
 
+                    segments_data = []
+                    if len(selected_countries) > 1:
+                        st.markdown("---")
+                        st.markdown("##### 🗺️ Trip Segments (Multi-Country Split):")
+                        
+                        if f"num_segments_{current_project['id']}" not in st.session_state:
+                            st.session_state[f"num_segments_{current_project['id']}"] = 1
+                            
+                        num_segs = st.session_state[f"num_segments_{current_project['id']}"]
+                        prev_seg_end = date.today()
+                        
+                        for s in range(num_segs):
+                            st.markdown(f"**Segment {s+1}**")
+                            
+                            default_s_start = date.today() if s == 0 else prev_seg_end
+                            default_s_end = default_s_start + dt.timedelta(days=1)
+                            
+                            s_col1, s_col2 = st.columns([2, 1])
+                            with s_col1:
+                                seg_dates = st.date_input(f"Dates (Segment {s+1})", value=(default_s_start, default_s_end), key=f"seg_dates_{s}")
+                            with s_col2:
+                                s_country = st.selectbox(f"Country", options=selected_countries, key=f"seg_country_{s}")
+                            
+                            if len(seg_dates) == 2:
+                                prev_seg_end = seg_dates[1]
+                                
+                            segments_data.append({"dates": seg_dates, "country": s_country})
+                            
+                        if st.form_submit_button("➕ Add Another Segment"):
+                            st.session_state[f"num_segments_{current_project['id']}"] += 1
+                            st.rerun()
+
                     if st.form_submit_button("Save Vacation Settings & Open Itinerary 🚀", use_container_width=True, type="primary"):
-                        vac_meta["start_date"] = str(start_date)
-                        vac_meta["end_date"] = str(end_date)
-                        vac_meta["travelers"] = travelers_count
-                        vac_meta["budget"] = total_budget
-                        vac_meta["current_trip_date"] = str(start_date)
-                        save_vacation_meta(vac_meta)
-                        st.rerun()
+                        if len(selected_countries) > 1:
+                            if not segments_data:
+                                st.error("Please define at least one segment.")
+                                st.stop()
+                                
+                            final_segments = []
+                            all_starts, all_ends = [], []
+                            
+                            for seg in segments_data:
+                                if len(seg["dates"]) < 2:
+                                    st.error("Please select BOTH a start and end date for all segments.")
+                                    st.stop()
+                                s_st, s_en = seg["dates"][0], seg["dates"][1]
+                                final_segments.append({"start": str(s_st), "end": str(s_en), "country": seg["country"]})
+                                all_starts.append(s_st)
+                                all_ends.append(s_en)
+                                
+                            trip_start = min(all_starts)
+                            trip_end = max(all_ends)
+                            vac_meta["segments"] = final_segments
+                        else:
+                            if len(trip_dates) < 2:
+                                st.error("Please select BOTH a start and end date.")
+                                st.stop()
+                            trip_start, trip_end = trip_dates[0], trip_dates[1]
+                            vac_meta["segments"] = [{"start": str(trip_start), "end": str(trip_end), "country": selected_countries[0]}]
 
+                        if trip_start > trip_end:
+                            st.error("Start date cannot be after end date.")
+                        else:
+                            vac_meta["start_date"] = str(trip_start)
+                            vac_meta["end_date"] = str(trip_end)
+                            vac_meta["travelers"] = travelers_count
+                            vac_meta["budget"] = total_budget
+                            vac_meta["current_trip_date"] = str(trip_start)
+                            
+                            if "days_metadata" not in vac_meta:
+                                vac_meta["days_metadata"] = {}
+
+                            for seg in vac_meta["segments"]:
+                                s_dt = datetime.strptime(seg["start"], "%Y-%m-%d").date()
+                                e_dt = datetime.strptime(seg["end"], "%Y-%m-%d").date()
+                                c_name = seg["country"]
+                                
+                                curr = s_dt
+                                while curr <= e_dt:
+                                    d_key = str(curr)
+                                    if d_key not in vac_meta["days_metadata"]:
+                                        vac_meta["days_metadata"][d_key] = {}
+                                    vac_meta["days_metadata"][d_key]["country"] = c_name
+                                    curr += dt.timedelta(days=1)
+
+                            save_vacation_meta(vac_meta)
+                            st.rerun()
+
+            #-------------------------------------
+            # שלב ג': מסך החופשה הראשי
+            #-------------------------------------
             else:
-                flag_emoji = country_emojis.get(selected_country, "🌍")
-
-                col_c1, col_c2, col_c3 = st.columns([1, 4, 1])
-                with col_c2:
-                    if st.button(f"{flag_emoji}  {selected_country.upper()}  {flag_emoji}", key="pure_title_btn", use_container_width=True, help="Click to edit trip settings"):
-                        edit_trip_settings_dialog(vac_meta)
-
-                st.divider()
-                
                 trip_start = datetime.strptime(vac_meta["start_date"], "%Y-%m-%d").date()
                 trip_end = datetime.strptime(vac_meta["end_date"], "%Y-%m-%d").date()
 
@@ -2549,7 +2814,26 @@ elif st.session_state.get('authentication_status') == True:
                     current_nav_date = trip_end
 
                 day_number = (current_nav_date - trip_start).days + 1
+                current_day_key = str(current_nav_date)
 
+                # שליפת המדינה ששויכה ליום הנוכחי (או ברירת מחדל למדינה הראשונה)
+                default_c = selected_countries[0] if selected_countries else "Japan"
+                if "days_metadata" not in vac_meta: vac_meta["days_metadata"] = {}
+                if current_day_key not in vac_meta["days_metadata"]: vac_meta["days_metadata"][current_day_key] = {}
+                
+                day_country = vac_meta["days_metadata"][current_day_key].get("country", default_c)
+                if day_country not in selected_countries and selected_countries:
+                    day_country = selected_countries[0]
+
+                flag_emoji = country_emojis.get(day_country, "🌍")
+
+                col_c1, col_c2, col_c3 = st.columns([1, 4, 1])
+                with col_c2:
+                    if st.button(f"{flag_emoji}  {day_country.upper()}  {flag_emoji}", key="pure_title_btn", use_container_width=True, help="Click to edit trip settings"):
+                        edit_trip_settings_dialog(vac_meta)
+
+                st.divider()
+                
                 def prev_day_cb():
                     prev_d = current_nav_date - dt.timedelta(days=1)
                     if prev_d >= trip_start:
@@ -2576,17 +2860,15 @@ elif st.session_state.get('authentication_status') == True:
                 with c_n:
                     st.button("›", key="btn_float_n", on_click=next_day_cb, help="Next Day")
             
-                current_day_key = str(current_nav_date)
-                
                 if "schedule" not in vac_meta: vac_meta["schedule"] = {}
                 if current_day_key not in vac_meta["schedule"]: vac_meta["schedule"][current_day_key] = []
 
-                if "days_metadata" not in vac_meta: vac_meta["days_metadata"] = {}
                 if current_day_key not in vac_meta["days_metadata"]:
                     vac_meta["days_metadata"][current_day_key] = {
                         "hotel": "",
                         "wake_up": "08:00",
-                        "notes": ""
+                        "notes": "",
+                        "country": day_country
                     }
 
                 current_day_meta = vac_meta["days_metadata"][current_day_key]
@@ -2847,13 +3129,15 @@ elif st.session_state.get('authentication_status') == True:
                                     save_vacation_meta(vac_meta)
                                     st.rerun()
 
-                    # =============== מפה ===============
+                    # =============== מפה ומסלול יומי ===============
                     with row2_c2:
                         with st.container(border=True):
-                            st.markdown("<div style='font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;'>🗺️ Map & Daily Attractions</div>", unsafe_allow_html=True)
+                            st.markdown("<div style='font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;'>🗺️ Map & Daily Route</div>", unsafe_allow_html=True)
                             
                             schedule = vac_meta.get("schedule", {}).get(str(current_day_key), [])
-                            
+                            if schedule:
+                                schedule = sorted(schedule, key=lambda x: x['time'])
+
                             hotels_list = vac_meta.get("hotels", [])
                             active_hotel = None
                             for h in hotels_list:
@@ -2861,30 +3145,44 @@ elif st.session_state.get('authentication_status') == True:
                                     active_hotel = h
                                     break
                             
-                            locations = []
+                            attraction_locations = []
                             for item in schedule:
-                                loc = item.get("location") or item.get("coords")
+                                loc = item.get("coords") or item.get("location") or item.get("name")
                                 if loc and loc.strip():
-                                    locations.append(loc.strip())
+                                    attraction_locations.append(loc.strip())
                             
                             if active_hotel and active_hotel.get('address'):
                                 map_location = active_hotel['address']
-                            elif locations:
-                                map_location = locations[0]
+                            elif attraction_locations:
+                                map_location = attraction_locations[0]
                             else:
-                                map_location = vac_meta.get("country")
+                                map_location = day_country
                             
                             embed_url = f"https://www.google.com/maps?q={map_location.strip().replace(' ', '+')}&output=embed"
                             st.components.v1.iframe(embed_url, height=150, scrolling=False)
                             
-                            if locations:
-                                if len(locations) == 1:
-                                    gmaps_all_link = f"https://www.google.com/maps/search/?api=1&query={locations[0].replace(' ', '+')}"
+                            if attraction_locations:
+                                hotel_addr = active_hotel.get('address') if (active_hotel and active_hotel.get('address')) else None
+                                
+                                if hotel_addr:
+                                    origin = hotel_addr
+                                    destination = attraction_locations[-1]
+                                    waypoints = attraction_locations[:-1] 
                                 else:
-                                    query_string = " OR ".join([f'"{loc}"' for loc in locations])
-                                    gmaps_all_link = f"https://www.google.com/maps/search/?api=1&query={query_string.replace(' ', '+')}"
+                                    origin = attraction_locations[0]
+                                    destination = attraction_locations[-1] if len(attraction_locations) > 1 else attraction_locations[0]
+                                    waypoints = attraction_locations[1:-1]
+                                
+                                base_dir_url = f"https://www.google.com/maps/dir/?api=1&origin={origin.replace(' ', '+')}&destination={destination.replace(' ', '+')}"
+                                if waypoints:
+                                    waypoints_str = "|".join([w.replace(' ', '+') for w in waypoints])
+                                    base_dir_url += f"&waypoints={waypoints_str}"
+                                
+                                gmaps_route_link = base_dir_url
+                            else:
+                                gmaps_route_link = f"https://www.google.com/maps/search/?api=1&query={map_location.replace(' ', '+')}"
 
-                                st.markdown("""
+                            st.markdown("""
                                 <style>
                                     [data-testid="stLinkButton"] {
                                         margin-top: -17px !important; 
@@ -2901,7 +3199,7 @@ elif st.session_state.get('authentication_status') == True:
                                     }
                                     [data-testid="stLinkButton"] a * {
                                         font-size: 0.8rem !important;
-                                        color: #334155 !important;                
+                                        color: #334155 !important;               
                                     }
                                     [data-testid="stLinkButton"] a:hover {
                                         background-color: #E2E8F0 !important;   
@@ -2911,16 +3209,13 @@ elif st.session_state.get('authentication_status') == True:
                                         color: #0F172A !important;
                                     }
                                 </style>
-                                """, unsafe_allow_html=True)
+                            """, unsafe_allow_html=True)
 
-                                st.link_button("View all locations for today in Google Maps", gmaps_all_link, use_container_width=True)
-                                
-                            else:
-                                st.info("No locations for today yet.")
+                            btn_text = "🚗 Open Today's Full Route in Google Maps" if len(attraction_locations) > 1 else "📍 View Location in Google Maps"
+                            st.link_button(btn_text, gmaps_route_link, use_container_width=True)
 
                 if st.button("➕ Add Attraction", key="fab_attraction", help="Add a new attraction"):
                     add_attraction_dialog(vac_meta, current_nav_date)
-
         # ------------------------------------------------
         # מודול שכר שעה 
         # ------------------------------------------------
