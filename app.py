@@ -644,7 +644,7 @@ st.markdown("""
         color: #dc3545 !important;
         font-size: 0.1rem !important;
     }
-    /* הגדרת סמן יד לכל המרכיבים של תיבת התאריך */
+    /* 61. הגדרת סמן יד לכל המרכיבים של תיבת התאריך */
     div[data-testid="stDateInput"] > div,
     div[data-testid="stDateInput"] input,
     div[role="dialog"] div[data-testid="stDateInput"] > div,
@@ -653,17 +653,25 @@ st.markdown("""
         transition: all 0.2s ease-in-out !important;
         border-radius: 8px !important;
     }
-    /* אפקט ריחוף בדיוק כמו בשדות הבחירה */
+    /* 62. אפקט ריחוף */
     div[data-testid="stDateInput"]:hover > div > div,
     div[role="dialog"] div[data-testid="stDateInput"]:hover > div > div {
         border-color: #1976d2 !important;
         box-shadow: 0 0 8px rgba(25, 118, 210, 0.25) !important;
     }
+    /* 63. אפקט הגדלה בעת ריחוף מעל סמלי המפה והעריכה */
+    .hover-scale {
+        display: inline-block;
+        transition: transform 0.2s ease-in-out;
+    }
+    .hover-scale:hover {
+        transform: scale(1.25);
+    }
     </style>
 """, unsafe_allow_html=True)
 
 #------------------------------------------------------
-# פונקציות וקטעי קוד שצריך שיהיו בתחילת הקוד 
+# פונקציות וקטעי קוד שאני צריך שיהיו בתחילת הקוד 
 #------------------------------------------------------
 
 MONTH_TO_NUM = {
@@ -673,51 +681,78 @@ MONTH_TO_NUM = {
 }
 NUM_TO_MONTH = {v: k for k, v in MONTH_TO_NUM.items()}
 
+countries_list = [
+    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+    "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+    "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia",
+    "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+    "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+    "Fiji", "Finland", "France",
+    "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+    "Haiti", "Honduras", "Hungary",
+    "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+    "Jamaica", "Japan", "Jordan",
+    "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan",
+    "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+    "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
+    "Oman",
+    "Pakistan", "Palau", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+    "Qatar",
+    "Romania", "Russia", "Rwanda",
+    "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+    "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+    "Yemen",
+    "Zambia", "Zimbabwe"
+]
+
 country_emojis = {
-                "Afghanistan": "🇦🇫", "Albania": "🇦🇱", "Algeria": "🇩🇿", "Andorra": "🇦🇩", "Angola": "🇦🇴", 
-                "Antigua and Barbuda": "🇦🇬", "Argentina": "🇦🇷", "Armenia": "🇦🇲", "Australia": "🇦🇺", 
-                "Austria": "🇦🇹", "Azerbaijan": "🇦🇿", "Bahamas": "🇧🇸", "Bahrain": "🇧🇭", "Bangladesh": "🇧🇩", 
-                "Barbados": "🇧🇧", "Belarus": "🇧🇾", "Belgium": "🇧🇪", "Belize": "🇧🇿", "Benin": "🇧🇯", 
-                "Bhutan": "🇧🇹", "Bolivia": "🇧🇴", "Bosnia and Herzegovina": "🇧🇦", "Botswana": "🇧🇼", 
-                "Brazil": "🇧🇷", "Brunei": "🇧🇳", "Bulgaria": "🇧🇬", "Burkina Faso": "🇧🇫", "Burundi": "🇧🇮", 
-                "Cabo Verde": "🇨🇻", "Cambodia": "🇰🇭", "Cameroon": "🇨🇲", "Canada": "🇨🇦", 
-                "Central African Republic": "🇨🇫", "Chad": "🇹🇩", "Chile": "🇨🇱", "China": "🇨🇳", 
-                "Colombia": "🇨🇴", "Comoros": "🇰🇲", "Congo": "🇨🇬", "Costa Rica": "🇨🇷", "Croatia": "🇭🇷", 
-                "Cuba": "🇨🇺", "Cyprus": "🇨🇾", "Czechia": "🇨🇿", "Denmark": "🇩🇰", "Djibouti": "🇩🇯", 
-                "Dominica": "🇩🇲", "Dominican Republic": "🇩🇴", "Ecuador": "🇪🇨", "Egypt": "🇪🇬", 
-                "El Salvador": "🇸🇻", "Equatorial Guinea": "🇬🇶", "Eritrea": "🇪🇷", "Estonia": "🇪🇪", 
-                "Eswatini": "🇸🇿", "Ethiopia": "🇪🇹", "Fiji": "🇫🇯", "Finland": "🇫🇮", "France": "🇫🇷", 
-                "Gabon": "🇬🇦", "Gambia": "🇬🇲", "Georgia": "🇬🇪", "Germany": "🇩🇪", "Ghana": "🇬🇭", 
-                "Greece": "🇬🇷", "Grenada": "🇬🇩", "Guatemala": "🇬🇹", "Guinea": "🇬🇳", "Guinea-Bissau": "🇬🇼", 
-                "Guyana": "🇬🇾", "Haiti": "🇭🇹", "Honduras": "🇭🇳", "Hungary": "🇭🇺", "Iceland": "🇮🇸", 
-                "India": "🇮🇳", "Indonesia": "🇮🇩", "Iran": "🇮🇷", "Iraq": "🇮🇶", "Ireland": "🇮🇪", 
-                "Israel": "🇮🇱", "Italy": "🇮🇹", "Jamaica": "🇯🇲", "Japan": "🇯🇵", "Jordan": "🇯🇴", 
-                "Kazakhstan": "🇰🇿", "Kenya": "🇰🇪", "Kiribati": "🇰🇮", "Kuwait": "🇰🇼", "Kyrgyzstan": "🇰🇬", 
-                "Laos": "🇱🇦", "Latvia": "🇱🇻", "Lebanon": "🇱🇧", "Lesotho": "🇱🇸", "Liberia": "🇱🇷", 
-                "Libya": "🇱🇾", "Liechtenstein": "🇱🇮", "Lithuania": "🇱🇹", "Luxembourg": "🇱🇺", 
-                "Madagascar": "🇲🇬", "Malawi": "🇲🇼", "Malaysia": "🇲🇾", "Maldives": "🇲🇻", "Mali": "🇲🇱", 
-                "Malta": "🇲🇹", "Marshall Islands": "🇲🇭", "Mauritania": "🇲🇷", "Mauritius": "🇲🇺", 
-                "Mexico": "🇲🇽", "Micronesia": "🇫🇲", "Moldova": "🇲🇩", "Monaco": "🇲🇨", "Mongolia": "🇲🇳", 
-                "Montenegro": "🇲🇪", "Morocco": "🇲🇦", "Mozambique": "🇲🇿", "Myanmar": "🇲🇲", "Namibia": "🇳🇦", 
-                "Nauru": "🇳🇷", "Nepal": "🇳🇵", "Netherlands": "🇳🇱", "New Zealand": "🇳🇿", "Nicaragua": "🇳🇮", 
-                "Niger": "🇳🇪", "Nigeria": "🇳🇬", "North Korea": "🇰🇵", "North Macedonia": "🇲🇰", "Norway": "🇳🇴", 
-                "Oman": "🇴🇲", "Pakistan": "🇵🇰", "Palau": "🇵🇼", "Palestine": "🇵🇸", "Panama": "🇵🇦", 
-                "Papua New Guinea": "🇵🇬", "Paraguay": "🇵🇾", "Peru": "🇵🇪", "Philippines": "🇵🇭", 
-                "Poland": "🇵🇱", "Portugal": "🇵🇹", "Qatar": "🇶🇦", "Romania": "🇷🇴", "Russia": "🇷🇺", 
-                "Rwanda": "🇷🇼", "Saint Kitts and Nevis": "🇰🇳", "Saint Lucia": "🇱🇨", 
-                "Saint Vincent and the Grenadines": "🇻🇨", "Samoa": "🇼🇸", "San Marino": "🇸🇲", 
-                "Sao Tome and Principe": "🇸🇹", "Saudi Arabia": "🇸🇦", "Senegal": "🇸🇳", "Serbia": "🇷🇸", 
-                "Seychelles": "🇸🇨", "Sierra Leone": "🇸🇱", "Singapore": "🇸🇬", "Slovakia": "🇸🇰", 
-                "Slovenia": "🇸🇮", "Solomon Islands": "🇸🇧", "Somalia": "🇸🇴", "South Africa": "🇿🇦", 
-                "South Korea": "🇰🇷", "South Sudan": "🇸🇸", "Spain": "🇪🇸", "Sri Lanka": "🇱🇰", 
-                "Sudan": "🇸🇩", "Suriname": "🇸🇷", "Sweden": "🇸🇪", "Switzerland": "🇨🇭", "Syria": "🇸🇾", 
-                "Taiwan": "🇹🇼", "Tajikistan": "🇹🇯", "Tanzania": "🇹🇿", "Thailand": "🇹🇭", "Timor-Leste": "🇹🇱", 
-                "Togo": "🇹🇬", "Tonga": "🇹🇴", "Trinidad and Tobago": "🇹🇹", "Tunisia": "🇹🇳", "Turkey": "🇹🇷", 
-                "Turkmenistan": "🇹🇲", "Tuvalu": "🇹🇻", "Uganda": "🇺🇬", "Ukraine": "🇺🇦", 
-                "United Arab Emirates": "🇦🇪", "United Kingdom": "🇬🇧", "United States": "🇺🇸", 
-                "Uruguay": "🇺🇾", "Uzbekistan": "🇺🇿", "Vanuatu": "🇻🇺", "Vatican City": "🇻🇦", 
-                "Venezuela": "🇻🇪", "Vietnam": "🇻🇳", "Yemen": "🇾🇪", "Zambia": "🇿🇲", "Zimbabwe": "🇿🇼"
-            }
+    "Afghanistan": "🇦🇫", "Albania": "🇦🇱", "Algeria": "🇩🇿", "Andorra": "🇦🇩", "Angola": "🇦🇴", 
+    "Antigua and Barbuda": "🇦🇬", "Argentina": "🇦🇷", "Armenia": "🇦🇲", "Australia": "🇦🇺", 
+    "Austria": "🇦🇹", "Azerbaijan": "🇦🇿", "Bahamas": "🇧🇸", "Bahrain": "🇧🇭", "Bangladesh": "🇧🇩", 
+    "Barbados": "🇧🇧", "Belarus": "🇧🇾", "Belgium": "🇧🇪", "Belize": "🇧🇿", "Benin": "🇧🇯", 
+    "Bhutan": "🇧🇹", "Bolivia": "🇧🇴", "Bosnia and Herzegovina": "🇧🇦", "Botswana": "🇧🇼", 
+    "Brazil": "🇧🇷", "Brunei": "🇧🇳", "Bulgaria": "🇧🇬", "Burkina Faso": "🇧🇫", "Burundi": "🇧🇮", 
+    "Cabo Verde": "🇨🇻", "Cambodia": "🇰🇭", "Cameroon": "🇨🇲", "Canada": "🇨🇦", 
+    "Central African Republic": "🇨🇫", "Chad": "🇹🇩", "Chile": "🇨🇱", "China": "🇨🇳", 
+    "Colombia": "🇨🇴", "Comoros": "🇰🇲", "Congo": "🇨🇬", "Costa Rica": "🇨🇷", "Croatia": "🇭🇷", 
+    "Cuba": "🇨🇺", "Cyprus": "🇨🇾", "Czechia": "🇨🇿", "Denmark": "🇩🇰", "Djibouti": "🇩🇯", 
+    "Dominica": "🇩🇲", "Dominican Republic": "🇩🇴", "Ecuador": "🇪🇨", "Egypt": "🇪🇬", 
+    "El Salvador": "🇸🇻", "Equatorial Guinea": "🇬🇶", "Eritrea": "🇪🇷", "Estonia": "🇪🇪", 
+    "Eswatini": "🇸🇿", "Ethiopia": "🇪🇹", "Fiji": "🇫🇯", "Finland": "🇫🇮", "France": "🇫🇷", 
+    "Gabon": "🇬🇦", "Gambia": "🇬🇲", "Georgia": "🇬🇪", "Germany": "🇩🇪", "Ghana": "🇬🇭", 
+    "Greece": "🇬🇷", "Grenada": "🇬🇩", "Guatemala": "🇬🇹", "Guinea": "🇬🇳", "Guinea-Bissau": "🇬🇼", 
+    "Guyana": "🇬🇾", "Haiti": "🇭🇹", "Honduras": "🇭🇳", "Hungary": "🇭🇺", "Iceland": "🇮🇸", 
+    "India": "🇮🇳", "Indonesia": "🇮🇩", "Iran": "🇮🇷", "Iraq": "🇮🇶", "Ireland": "🇮🇪", 
+    "Israel": "🇮🇱", "Italy": "🇮🇹", "Jamaica": "🇯🇲", "Japan": "🇯🇵", "Jordan": "🇯🇴", 
+    "Kazakhstan": "🇰🇿", "Kenya": "🇰🇪", "Kiribati": "🇰🇮", "Kuwait": "🇰🇼", "Kyrgyzstan": "🇰🇬", 
+    "Laos": "🇱🇦", "Latvia": "🇱🇻", "Lebanon": "🇱🇧", "Lesotho": "🇱🇸", "Liberia": "🇱🇷", 
+    "Libya": "🇱🇾", "Liechtenstein": "🇱🇮", "Lithuania": "🇱🇹", "Luxembourg": "🇱🇺", 
+    "Madagascar": "🇲🇬", "Malawi": "🇲🇼", "Malaysia": "🇲🇾", "Maldives": "🇲🇻", "Mali": "🇲🇱", 
+    "Malta": "🇲🇹", "Marshall Islands": "🇲🇭", "Mauritania": "🇲🇷", "Mauritius": "🇲🇺", 
+    "Mexico": "🇲🇽", "Micronesia": "🇫🇲", "Moldova": "🇲🇩", "Monaco": "🇲🇨", "Mongolia": "🇲🇳", 
+    "Montenegro": "🇲🇪", "Morocco": "🇲🇦", "Mozambique": "🇲🇿", "Myanmar": "🇲🇲", "Namibia": "🇳🇦", 
+    "Nauru": "🇳🇷", "Nepal": "🇳🇵", "Netherlands": "🇳🇱", "New Zealand": "🇳🇿", "Nicaragua": "🇳🇮", 
+    "Niger": "🇳🇪", "Nigeria": "🇳🇬", "North Korea": "🇰🇵", "North Macedonia": "🇲🇰", "Norway": "🇳🇴", 
+    "Oman": "🇴🇲", "Pakistan": "🇵🇰", "Palau": "🇵🇼", "Panama": "🇵🇦", 
+    "Papua New Guinea": "🇵🇬", "Paraguay": "🇵🇾", "Peru": "🇵🇪", "Philippines": "🇵🇭", 
+    "Poland": "🇵🇱", "Portugal": "🇵🇹", "Qatar": "🇶🇦", "Romania": "🇷🇴", "Russia": "🇷🇺", 
+    "Rwanda": "🇷🇼", "Saint Kitts and Nevis": "🇰🇳", "Saint Lucia": "🇱🇨", 
+    "Saint Vincent and the Grenadines": "🇻🇨", "Samoa": "🇼🇸", "San Marino": "🇸🇲", 
+    "Sao Tome and Principe": "🇸🇹", "Saudi Arabia": "🇸🇦", "Senegal": "🇸🇳", "Serbia": "🇷🇸", 
+    "Seychelles": "🇸🇨", "Sierra Leone": "🇸🇱", "Singapore": "🇸🇬", "Slovakia": "🇸🇰", 
+    "Slovenia": "🇸🇮", "Solomon Islands": "🇸🇧", "Somalia": "🇸🇴", "South Africa": "🇿🇦", 
+    "South Korea": "🇰🇷", "South Sudan": "🇸🇸", "Spain": "🇪🇸", "Sri Lanka": "🇱🇰", 
+    "Sudan": "🇸🇩", "Suriname": "🇸🇷", "Sweden": "🇸🇪", "Switzerland": "🇨🇭", "Syria": "🇸🇾", 
+    "Taiwan": "🇹🇼", "Tajikistan": "🇹🇯", "Tanzania": "🇹🇿", "Thailand": "🇹🇭", "Timor-Leste": "🇹🇱", 
+    "Togo": "🇹🇬", "Tonga": "🇹🇴", "Trinidad and Tobago": "🇹🇹", "Tunisia": "🇹🇳", "Turkey": "🇹🇷", 
+    "Turkmenistan": "🇹🇲", "Tuvalu": "🇹🇻", "Uganda": "🇺🇬", "Ukraine": "🇺🇦", 
+    "United Arab Emirates": "🇦🇪", "United Kingdom": "🇬🇧", "United States": "🇺🇸", 
+    "Uruguay": "🇺🇾", "Uzbekistan": "🇺🇿", "Vanuatu": "🇻🇺", "Vatican City": "🇻🇦", 
+    "Venezuela": "🇻🇪", "Vietnam": "🇻🇳", "Yemen": "🇾🇪", "Zambia": "🇿🇲", "Zimbabwe": "🇿🇼"
+}
 
 @st.dialog("Delete Account")
 def delete_user_dialog(username, config_data):
@@ -817,7 +852,7 @@ else:
     except Exception as e:
         st.error(e)
 
-# בדיקת סטטוס ההתחברות
+# ============== בדיקת סטטוס ההתחברות ======================
 if st.session_state.get('authentication_status') == False:
     st.error("Incorrect username or password.")
 
@@ -1454,7 +1489,7 @@ elif st.session_state.get('authentication_status') == True:
         actual_month = NUM_TO_MONTH[selected_date.month]
         actual_year = int(selected_date.year)
 
-        item_name = st.text_input("Description (e.g., Groceries, Salary, Entertainment) - OPTIONAL")
+        item_name = st.text_input("Description (e.g., Groceries, Salary) - OPTIONAL", max_chars=25)
         amount = st.number_input("Amount (ILS)", value=None, placeholder="Enter Amount...", min_value=0.0, step=1.0)
         item_type = st.selectbox("Type:", ["Expense", "Income"])
         
@@ -1641,7 +1676,7 @@ elif st.session_state.get('authentication_status') == True:
 
         with st.form(f"edit_tx_form_{tx_id}"):
             new_cat = st.selectbox("Category", available_categories, index=cat_index)
-            new_name = st.text_input("Description / Name", value=curr_name)
+            new_name = st.text_input("Description / Name", value=curr_name, max_chars=25)
             new_amount = st.number_input("Amount (ILS)", value=curr_amt, min_value=0.0, step=0.01, format="%.2f")
             
             col_save, col_del = st.columns(2)
@@ -1715,14 +1750,15 @@ elif st.session_state.get('authentication_status') == True:
         if not selected_countries and "country" in vac_meta and vac_meta["country"] != "Select Country...":
             selected_countries = [vac_meta["country"]]
 
+        updated_segments = []
+
         with st.form("edit_trip_form"):
             st.markdown("Update your trip logistics and dates:")
             
             if len(selected_countries) == 1:
                 trip_dates = st.date_input("🗓️ Trip Dates (Start & End)", value=(current_start, current_end))
             else:
-                st.markdown("---")
-                st.markdown("##### 🗺️ Trip Segments:")
+                st.markdown("##### Trip Segments:")
                 
                 existing_segments = vac_meta.get("segments", [{"start": str(current_start), "end": str(current_end), "country": selected_countries[0]}])
                 
@@ -1730,7 +1766,6 @@ elif st.session_state.get('authentication_status') == True:
                     st.session_state[f"edit_num_segments_{current_project['id']}"] = len(existing_segments)
                 
                 num_segs = st.session_state[f"edit_num_segments_{current_project['id']}"]
-                updated_segments = []
                 
                 for s in range(num_segs):
                     default_seg = existing_segments[s] if s < len(existing_segments) else existing_segments[-1]
@@ -1754,7 +1789,6 @@ elif st.session_state.get('authentication_status') == True:
                     st.session_state[f"edit_num_segments_{current_project['id']}"] += 1
                     st.rerun()
 
-            st.markdown("---")
             t_col1, t_col2 = st.columns(2)
             with t_col1:
                 new_travelers = st.number_input("Number of Travelers", min_value=1, value=current_travelers, step=1)
@@ -1799,14 +1833,25 @@ elif st.session_state.get('authentication_status') == True:
                     if "days_metadata" not in vac_meta:
                         vac_meta["days_metadata"] = {}
 
+                    def init_or_update_day(d_str, country_name):
+                        if d_str not in vac_meta["days_metadata"]:
+                            vac_meta["days_metadata"][d_str] = {
+                                "country": country_name,
+                                "notes_list": [],
+                                "schedule": []
+                            }
+                        else:
+                            vac_meta["days_metadata"][d_str]["country"] = country_name
+                            if "notes_list" not in vac_meta["days_metadata"][d_str]:
+                                vac_meta["days_metadata"][d_str]["notes_list"] = []
+                            if "schedule" not in vac_meta["days_metadata"][d_str]:
+                                vac_meta["days_metadata"][d_str]["schedule"] = []
+
                     if len(selected_countries) == 1:
                         single_c = selected_countries[0]
                         curr = new_start
                         while curr <= new_end:
-                            d_key = str(curr)
-                            if d_key not in vac_meta["days_metadata"]:
-                                vac_meta["days_metadata"][d_key] = {}
-                            vac_meta["days_metadata"][d_key]["country"] = single_c
+                            init_or_update_day(str(curr), single_c)
                             curr += dt.timedelta(days=1)
                     else:
                         for seg in vac_meta["segments"]:
@@ -1816,11 +1861,10 @@ elif st.session_state.get('authentication_status') == True:
                             
                             curr = s_dt
                             while curr <= e_dt:
-                                d_key = str(curr)
-                                if d_key not in vac_meta["days_metadata"]:
-                                    vac_meta["days_metadata"][d_key] = {}
-                                vac_meta["days_metadata"][d_key]["country"] = c_name
+                                init_or_update_day(str(curr), c_name)
                                 curr += dt.timedelta(days=1)
+
+                    vac_meta["days_metadata"] = dict(sorted(vac_meta["days_metadata"].items()))
 
                     curr_nav = datetime.strptime(vac_meta.get("current_trip_date", str(new_start)), "%Y-%m-%d").date()
                     if curr_nav < new_start or curr_nav > new_end:
@@ -1829,25 +1873,37 @@ elif st.session_state.get('authentication_status') == True:
                     save_vacation_meta(vac_meta)
                     st.rerun()
 
+        st.markdown("#### 📂 Trip Documents Manager")
+        render_document_manager(f"{project_folder}/documents", can_edit=True, show_download=False)
+
     @st.dialog("➕ Add New Attraction")
     def add_attraction_dialog(v_meta, day_key):
         day_str = str(day_key)
         with st.form("add_attraction_form"):
-            new_name = st.text_input("🎯 Attraction Name (e.g. Arakura Sengen Shrine)")
+            new_name = st.text_input("Description")
             
             c_time, c_dur = st.columns(2)
             start_time = c_time.time_input("Start Time (Required)", value=None, help="Please select a time for this attraction")
-            duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.0, max_value=24.0, value=1.0, step=0.25)
+            
+            duration_options = [
+                "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", 
+                "03:30", "04:00", "05:00", "06:00", "08:00", "10:00", "12:00"
+            ]
+            selected_duration_str = c_dur.selectbox("Duration (Hours:Minutes)", options=duration_options, index=3)
             
             new_coords_str = st.text_input("📍 Location")
-            
             new_budget = st.number_input("💰 Budget (₪)", min_value=0, value=0, step=50)
             new_notes = st.text_area("📝 Notes")
             
             if st.form_submit_button("Add Attraction", use_container_width=True, type="primary"):
                 if not new_name.strip():
-                    st.error("Please enter an attraction name.")
+                    st.error("Please enter a description.")
+                elif start_time is None:
+                    st.error("Please select a start time for the attraction.")
                 else:
+                    parts = selected_duration_str.split(":")
+                    duration_hours = int(parts[0]) + int(parts[1]) / 60.0
+
                     new_item = {
                         "name": new_name,
                         "time": str(start_time),
@@ -1856,61 +1912,119 @@ elif st.session_state.get('authentication_status') == True:
                         "budget": new_budget,
                         "notes": new_notes
                     }
-                    if "schedule" not in v_meta: v_meta["schedule"] = {}
-                    if day_str not in v_meta["schedule"]: v_meta["schedule"][day_str] = []
                     
-                    v_meta["schedule"][day_str].append(new_item)
+                    if "days_metadata" not in v_meta: 
+                        v_meta["days_metadata"] = {}
+                    if day_str not in v_meta["days_metadata"]: 
+                        v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][day_str]: 
+                        v_meta["days_metadata"][day_str]["schedule"] = []
+                    
+                    v_meta["days_metadata"][day_str]["schedule"].append(new_item)
                     save_vacation_meta(v_meta)
                     st.success("Added successfully!")
                     st.rerun()
 
     @st.dialog("✏️ Edit Attraction")
     def edit_attraction_dialog(v_meta, day_key, idx, item):
+        st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
         day_str = str(day_key)
-        with st.form(f"edit_attraction_form_{day_str}_{idx}"):
-            new_name = st.text_input("🎯 Attraction Name", value=item.get('name', ''))
-            
-            c_time, c_dur = st.columns(2)
-            try:
-                def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
-            except:
-                def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
+        
+        state_key_needs = f"edit_att_needs_{day_str}_{idx}"
+        state_key_booked = f"edit_att_booked_{day_str}_{idx}"
+        
+        if state_key_needs not in st.session_state:
+            st.session_state[state_key_needs] = item.get('needs_booking', False)
+        if state_key_booked not in st.session_state:
+            st.session_state[state_key_booked] = item.get('booked', False)
 
-            start_time = c_time.time_input("Start Time", value=def_time)
-            duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.5, max_value=12.0, value=float(item.get('duration', 2.0)), step=0.5)
-            
-            new_coords_str = st.text_input("📍 Location", value=item.get('coords', ''))
-            
-            new_budget = st.number_input("💰 Budget (₪)", min_value=0, value=int(item.get('budget', 0)), step=50)
-            new_notes = st.text_area("📝 Notes", value=item.get('notes', ''))
-            
-            col_save, col_del = st.columns(2)
-            with col_save:
-                if st.form_submit_button("Save Changes", use_container_width=True, type="primary"):
-                    updated_item = {
-                        "name": new_name,
-                        "time": str(start_time),
-                        "duration": duration_hours,
-                        "coords": new_coords_str.strip(),
-                        "budget": new_budget,
-                        "notes": new_notes
-                    }
+        needs_booking = st.checkbox(
+            "🎟️ Needs to be booked in advance?", 
+            value=st.session_state[state_key_needs],
+            key=f"chk_att_needs_{day_str}_{idx}",
+            on_change=lambda: st.session_state.update({state_key_needs: st.session_state[f"chk_att_needs_{day_str}_{idx}"]})
+        )
 
-                    if "schedule" not in v_meta: v_meta["schedule"] = {}
-                    if day_str not in v_meta["schedule"]: v_meta["schedule"][day_str] = []
+        is_booked = False
+        if needs_booking:
+            is_booked = st.checkbox(
+                "✅ Already Booked / Reserved?", 
+                value=st.session_state[state_key_booked],
+                key=f"chk_att_booked_{day_str}_{idx}",
+                on_change=lambda: st.session_state.update({state_key_booked: st.session_state[f"chk_att_booked_{day_str}_{idx}"]})
+            )
 
-                    v_meta["schedule"][day_str][idx] = updated_item
+        new_name = st.text_input("Description", value=item.get('name', ''), key=f"att_name_{day_str}_{idx}")
+        
+        c_time, c_dur = st.columns(2)
+        try:
+            def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
+        except:
+            def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
+
+        start_time = c_time.time_input("Start Time", value=def_time, key=f"att_time_{day_str}_{idx}")
+        duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=float(item.get('duration', 2.0)), step=0.25, key=f"att_dur_{day_str}_{idx}")
+        
+        new_coords_str = st.text_input("📍 Location", value=item.get('coords', ''), key=f"att_coords_{day_str}_{idx}")
+        
+        att_budget = float(item.get('budget', 0.0))
+        if (needs_booking and is_booked):
+            att_budget = st.number_input("💰 Budget (₪)", min_value=0.0, value=att_budget, step=50.0, key=f"att_budget_{day_str}_{idx}")
+        else:
+            att_budget = 0.0
+
+        new_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"att_notes_{day_str}_{idx}")
+        
+        st.write("")
+        col_save, col_del = st.columns(2)
+        
+        with col_save:
+            save_clicked = st.button("Save Changes", use_container_width=True, type="primary", key=f"att_save_{day_str}_{idx}")
+        with col_del:
+            delete_clicked = st.button("Delete", use_container_width=True, key=f"att_del_{day_str}_{idx}")
+        
+        if save_clicked:
+            if not new_name.strip():
+                st.error("Please enter a description.")
+            elif start_time is None:
+                st.error("Please select a start time.")
+            else:
+                updated_item = {
+                    "name": new_name.strip(),
+                    "time": str(start_time),
+                    "duration": duration_hours,
+                    "coords": new_coords_str.strip(),
+                    "budget": att_budget if (needs_booking and is_booked) else 0.0,
+                    "needs_booking": needs_booking,
+                    "booked": is_booked if needs_booking else False,
+                    "notes": new_notes.strip(),
+                    "type": "attraction"
+                }
+
+                if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+
+                v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
+                save_vacation_meta(v_meta)
+                
+                if state_key_needs in st.session_state: del st.session_state[state_key_needs]
+                if state_key_booked in st.session_state: del st.session_state[state_key_booked]
+                
+                st.success("Updated successfully!")
+                st.rerun()
+                
+        if delete_clicked:
+            if day_str in v_meta.get("days_metadata", {}):
+                if "schedule" in v_meta["days_metadata"][day_str]:
+                    v_meta["days_metadata"][day_str]["schedule"].pop(idx)
                     save_vacation_meta(v_meta)
-                    st.success("Updated successfully!")
-                    st.rerun()
                     
-            with col_del:
-                if st.form_submit_button("Delete", use_container_width=True):
-                    if day_str in v_meta.get("schedule", {}):
-                        v_meta["schedule"][day_str].pop(idx)
-                        save_vacation_meta(v_meta)
-                        st.success("Deleted successfully!")
-                        st.rerun()
+                    if state_key_needs in st.session_state: del st.session_state[state_key_needs]
+                    if state_key_booked in st.session_state: del st.session_state[state_key_booked]
+                    
+                    st.success("Deleted successfully!")
+                    st.rerun()
 
     @st.dialog("🏨 Hotel Details & Dates")
     def hotel_details_dialog(v_meta, current_date, active_hotel):
@@ -1925,6 +2039,7 @@ elif st.session_state.get('authentication_status') == True:
                 default_checkin = current_date
                 default_checkout = current_date + timedelta(days=1)
                 
+            default_price = float(active_hotel.get("price", 0.0)) if active_hotel else 0.0
             default_notes = active_hotel.get("notes", "") if active_hotel else ""
 
             hotel_name = st.text_input("Hotel Name", value=default_name)
@@ -1936,9 +2051,16 @@ elif st.session_state.get('authentication_status') == True:
             with col_d2:
                 check_out = st.date_input("Check-out Date", value=default_checkout)
                 
+            hotel_price = st.number_input("💰 Total Hotel Cost (₪)", min_value=0.0, value=default_price, step=100.0)
             hotel_notes = st.text_area("📝 Hotel Notes (Booking ref, breakfast, etc.)", value=default_notes)
             
-            if st.form_submit_button("Save Hotel Details", use_container_width=True, type="primary"):
+            st.write("")
+            
+            col_save, col_del = st.columns(2)
+            save_clicked = col_save.form_submit_button("Save Hotel Details", use_container_width=True, type="primary")
+            delete_clicked = col_del.form_submit_button("Delete Hotel", use_container_width=True)
+            
+            if save_clicked:
                 if "hotels" not in v_meta: 
                     v_meta["hotels"] = []
                 
@@ -1947,6 +2069,7 @@ elif st.session_state.get('authentication_status') == True:
                     "address": hotel_address,
                     "check_in": str(check_in),
                     "check_out": str(check_out),
+                    "price": hotel_price,
                     "notes": hotel_notes
                 }
                 
@@ -1957,6 +2080,773 @@ elif st.session_state.get('authentication_status') == True:
                 save_vacation_meta(v_meta)
                 st.success("Hotel saved successfully!")
                 st.rerun()
+                
+            if delete_clicked:
+                if "hotels" in v_meta:
+                    if active_hotel in v_meta["hotels"]:
+                        v_meta["hotels"].remove(active_hotel)
+                        save_vacation_meta(v_meta)
+                        st.success("Hotel deleted successfully!")
+                        st.rerun()
+                    else:
+                        st.warning("Hotel not found in records.")
+
+    def render_document_manager(docs_folder, can_edit=False, show_download=True):
+        os.makedirs(docs_folder, exist_ok=True)
+        
+        if can_edit:
+            uploaded_files = st.file_uploader("Upload flight tickets, insurance, etc.", accept_multiple_files=True, key=f"uploader_{docs_folder}")
+            if uploaded_files:
+                for uploaded_file in uploaded_files:
+                    with open(os.path.join(docs_folder, uploaded_file.name), "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                st.rerun()
+
+        existing_docs = os.listdir(docs_folder) if os.path.exists(docs_folder) else []
+        if not existing_docs:
+            st.info("No documents uploaded yet.")
+        else:
+            for doc in existing_docs:
+                file_path = os.path.join(docs_folder, doc)
+                
+                col_name, col_actions = st.columns([0.7, 0.3], vertical_alignment="center")
+
+                with col_name:
+                    st.markdown(f"📄 <b>{doc}</b>", unsafe_allow_html=True)
+
+                with col_actions:
+                    if show_download:
+                        with open(file_path, "rb") as f:
+                            file_bytes = f.read()
+                        sub_cols = st.columns(2 if can_edit else 1, vertical_alignment="center")
+                        with sub_cols[0]:
+                            st.download_button("Download", file_bytes, doc, key=f"dl_{docs_folder}_{doc}", help="Download", use_container_width=True)
+                        if can_edit:
+                            with sub_cols[1]:
+                                if st.button("🗑️", key=f"del_{docs_folder}_{doc}", help="Delete", use_container_width=True):
+                                    os.remove(file_path)
+                                    st.rerun()
+                    else:
+                        if can_edit:
+                            if st.button("Delete", key=f"del_only_{docs_folder}_{doc}", use_container_width=True):
+                                os.remove(file_path)
+                                st.rerun()
+
+    @st.dialog("Trip Options")
+    def trip_menu_dialog(vac_meta, project_folder):
+        st.markdown("Choose what you would like to view or edit:")
+        st.write("")
+            
+        if st.button("Trip Overview & Documents", use_container_width=True):
+            st.session_state["open_dialog"] = "overview"
+            st.rerun()
+            
+        if st.button("Trip Expenses Tracker", use_container_width=True):
+            st.session_state["open_dialog"] = "expenses"
+            st.rerun()
+
+        if st.button("⚙️ Edit Trip Settings", use_container_width=True, type="primary"):
+            st.session_state["open_dialog"] = "edit_settings"
+            st.rerun()
+
+    @st.dialog("Trip Overview & Documents")
+    def trip_overview_dialog(vac_meta, project_folder):
+        st.markdown("<h2 style='text-align: center;'>Trip Overview</h2>", unsafe_allow_html=True)
+        
+        today = date.today()
+        try:
+            start_d = datetime.strptime(vac_meta.get("start_date", str(today)), "%Y-%m-%d").date()
+            end_d = datetime.strptime(vac_meta.get("end_date", str(today)), "%Y-%m-%d").date()
+        except:
+            start_d, end_d = today, today + timedelta(days=1)
+            
+        total_trip_days = (end_d - start_d).days + 1
+        
+        if today < start_d:
+            days_to_go = (start_d - today).days
+            st.markdown(f"<h3 style='text-align: center; color: #1976d2;'>⏳ {days_to_go} Days To Go! 🚀</h3>", unsafe_allow_html=True)
+        elif start_d <= today <= end_d:
+            current_day_num = (today - start_d).days + 1
+            progress_val = current_day_num / total_trip_days
+            st.markdown(f"<h3 style='text-align: center; color: #2e7d32;'>🌴 Day {current_day_num} of {total_trip_days} ✈️</h3>", unsafe_allow_html=True)
+            st.progress(progress_val)
+        else:
+            st.markdown(f"<h3 style='text-align: center; color: #6c757d;'>🏁 Trip Completed</h3>", unsafe_allow_html=True)
+            
+        st.divider()
+        
+        total_budget = float(vac_meta.get("budget", 0))
+        
+        category_expenses = {
+            "Attractions": 0.0,
+            "Restaurants": 0.0,
+            "Transportation": 0.0,
+            "Accommodation": 0.0,
+            "Shopping": 0.0,
+            "Other": 0.0
+        }
+        
+        hotels_expenses = sum(float(h.get("price", 0.0)) for h in vac_meta.get("hotels", []))
+        category_expenses["Accommodation"] += hotels_expenses
+        
+        for d_key, d_val in vac_meta.get("days_metadata", {}).items():
+            for item in d_val.get("schedule", []):
+                cost = float(item.get("budget", 0.0))
+                if cost > 0:
+                    i_type = item.get("type", "attraction")
+                    if i_type == "attraction":
+                        category_expenses["Attractions"] += cost
+                    elif i_type == "transit":
+                        category_expenses["Transportation"] += cost
+                    elif i_type == "restaurant":
+                        category_expenses["Restaurants"] += cost
+                
+        trip_expenses_file = f"{project_folder}/trip_expenses.csv"
+        if os.path.exists(trip_expenses_file):
+            df_exp = pd.read_csv(trip_expenses_file)
+            if not df_exp.empty and "Amount" in df_exp.columns and "Expense Type" in df_exp.columns:
+                for _, row in df_exp.iterrows():
+                    amt = float(row["Amount"])
+                    e_type = str(row["Expense Type"]).strip()
+                    
+                    if e_type == "Shopping":
+                        category_expenses["Shopping"] += amt
+                    elif e_type == "Restaurants":
+                        category_expenses["Restaurants"] += amt
+                    elif e_type == "Transportation":
+                        category_expenses["Transportation"] += amt
+                    elif e_type == "Attractions":
+                        category_expenses["Attractions"] += amt
+                    else:
+                        category_expenses["Other"] += amt
+
+        total_expenses = sum(category_expenses.values())
+        balance = total_budget - total_expenses
+        bal_sign = "+" if balance >= 0 else ""
+        
+        with st.container(border=True):
+            col_b1, col_b2 = st.columns(2)
+            col_b1.markdown(f"**Budget:**")
+            col_b2.markdown(f"₪{total_budget:,.2f}")
+            
+            col_b1, col_b2 = st.columns(2)
+            col_b1.markdown(f"**Total Expenses:**")
+            col_b2.markdown(f"₪{total_expenses:,.2f}")
+            
+            col_b1, col_b2 = st.columns(2)
+            col_b1.markdown(f"**Balance:**")
+            col_b2.markdown(f"<span style='color: {'#2e7d32' if balance >=0 else '#c62828'};'><b>{bal_sign}₪{balance:,.2f}</b></span>", unsafe_allow_html=True)
+
+        st.divider()
+        st.markdown("#### 📊 Expenses Breakdown")
+        
+        active_categories = {k: v for k, v in category_expenses.items() if v > 0}
+        
+        if not active_categories:
+            st.info("No expenses recorded yet to display the chart.")
+        else:
+            import plotly.express as px
+            
+            df_pie = pd.DataFrame({
+                "Category": list(active_categories.keys()),
+                "Amount": list(active_categories.values())
+            })
+            
+            fig = px.pie(
+                df_pie, 
+                names="Category", 
+                values="Amount", 
+                hole=0.4, 
+                color_discrete_sequence=['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#FF6D01']
+            )
+            
+            fig.update_traces(textposition='inside', textinfo='percent+label', textfont_size=13)
+            fig.update_layout(
+                margin=dict(t=10, b=10, l=10, r=10),
+                height=350,
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.markdown("#### 📁 Relevant Documents")
+        render_document_manager(f"{project_folder}/documents", can_edit=False, show_download=True)
+
+    @st.dialog("Trip Expenses Tracker")
+    def trip_expenses_dialog(project_folder, vac_meta):
+        st.markdown("""
+            <style>
+                div[role="dialog"] {
+                    width: 80% !important;
+                    max-width: 900px !important;
+                }
+                .tx-line {
+                    display: flex;
+                    align-items: center;
+                    padding: 12px 12px !important;
+                    margin-bottom: 14px;
+                    border-radius: 6px;
+                    transition: background-color 0.2s ease;
+                    width: 100%;
+                    box-sizing: border-box !important;
+                }
+                .tx-line:hover {
+                    background-color: rgba(128, 128, 128, 0.18) !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<h2 style='text-align: center;'>Expenses Tracker</h2>", unsafe_allow_html=True)
+        st.write("")
+        
+        expenses_file = f"{project_folder}/trip_expenses.csv"
+        
+        def delete_expense_callback(exp_id):
+            if os.path.exists(expenses_file):
+                temp_df = pd.read_csv(expenses_file)
+                temp_df = temp_df[temp_df["ID"] != exp_id]
+                temp_df.to_csv(expenses_file, index=False)
+
+        if os.path.exists(expenses_file):
+            df_exp = pd.read_csv(expenses_file)
+        else:
+            df_exp = pd.DataFrame(columns=["ID", "Date", "Expense Type", "Description", "Amount"])
+            
+        if "ID" not in df_exp.columns or df_exp["ID"].isna().any():
+            df_exp["ID"] = range(len(df_exp))
+            df_exp.to_csv(expenses_file, index=False)
+
+        if f"edit_trip_exp_id_{project_folder}" not in st.session_state:
+            st.session_state[f"edit_trip_exp_id_{project_folder}"] = None
+
+        editing_id = st.session_state[f"edit_trip_exp_id_{project_folder}"]
+
+        if editing_id is not None:
+            row_match = df_exp[df_exp["ID"] == editing_id]
+            if not row_match.empty:
+                current_row = row_match.iloc[0]
+                st.markdown("---")
+                st.markdown(f"##### ✏️ Edit Expense (ID: {editing_id})")
+                
+                with st.form(f"edit_inline_exp_form_{editing_id}"):
+                    try:
+                        def_date = datetime.strptime(str(current_row["Date"]), "%Y-%m-%d").date()
+                    except:
+                        def_date = date.today()
+
+                    new_date = st.date_input("Date", value=def_date, format="DD/MM/YYYY")
+                    
+                    exp_types = ["Shopping", "Restaurants", "Transportation", "Accommodation", "Other"]
+                    curr_type = str(current_row["Expense Type"])
+                    t_idx = exp_types.index(curr_type) if curr_type in exp_types else 0
+                    new_type = st.selectbox("Expense Type", exp_types, index=t_idx)
+                    
+                    new_desc = st.text_input("Description", value=str(current_row["Description"]), max_chars=25)
+                    new_amt = st.number_input("Amount (ILS)", value=float(current_row["Amount"]), min_value=0.0, step=10.0)
+                    
+                    col_save, col_cancel = st.columns(2)
+                    with col_save:
+                        if st.form_submit_button("Save Changes", use_container_width=True, type="primary"):
+                            if new_amt > 0:
+                                mask = df_exp["ID"] == editing_id
+                                df_exp.loc[mask, "Date"] = str(new_date)
+                                df_exp.loc[mask, "Expense Type"] = new_type
+                                df_exp.loc[mask, "Description"] = new_desc.strip()[:25] if new_desc else "..."
+                                df_exp.loc[mask, "Amount"] = new_amt
+                                df_exp.to_csv(expenses_file, index=False)
+                                st.session_state[f"edit_trip_exp_id_{project_folder}"] = None
+                                st.success("Expense updated successfully!")
+                                st.rerun()
+                            else:
+                                st.error("Please enter a valid amount.")
+                    with col_cancel:
+                        if st.form_submit_button("Cancel", use_container_width=True):
+                            st.session_state[f"edit_trip_exp_id_{project_folder}"] = None
+                            st.rerun()
+                st.markdown("---")
+
+        if df_exp.empty:
+            st.info("No expenses recorded yet. You can add expenses using the 'Add' button on the main screen.")
+        else:
+            hc_main, hc_edit_space = st.columns([0.96, 0.04])
+            with hc_main:
+                st.markdown("""
+                    <div style='display: flex; align-items: center; width: 100%; padding: 4px 12px; margin-bottom: 8px;'>
+                        <div style='flex: 0.13; text-align: center; color: var(--text-color, #adb5bd); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px;'>DATE</div>
+                        <div style='flex: 0.25; text-align: center; color: var(--text-color, #adb5bd); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px;'>TYPE</div>
+                        <div style='flex: 0.44; text-align: center; color: var(--text-color, #adb5bd); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px;'>DESCRIPTION</div>
+                        <div style='flex: 0.18; text-align: center; color: var(--text-color, #adb5bd); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px;'>AMOUNT</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("<hr style='margin: 0px 0px 4px 0px; border-color: rgba(128, 128, 128, 0.2);'>", unsafe_allow_html=True)
+
+            for idx, row in df_exp.iterrows():
+                e_id = int(row["ID"]) if pd.notna(row["ID"]) else idx
+                r_date = str(row["Date"])
+                r_type = str(row["Expense Type"])
+                r_desc = str(row["Description"])
+                r_amt = float(row["Amount"]) if pd.notna(row["Amount"]) else 0.0
+
+                t_row, p_row = st.columns([0.96, 0.04], vertical_alignment="center")
+                
+                with t_row:
+                    st.markdown(f"""
+                        <div class='tx-line'>
+                            <div style='flex: 0.13; text-align: center; font-size: 0.9rem; font-weight: 500; opacity: 0.85;'>{r_date}</div>
+                            <div style='flex: 0.25; text-align: center;'><span style='font-size: 0.8rem; opacity: 0.8; background: rgba(25, 118, 210, 0.15); padding: 3px 10px; border-radius: 12px; font-weight: 500;'>{r_type}</span></div>
+                            <div style='flex: 0.44; text-align: center; font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;'>{r_desc}</div>
+                            <div style='flex: 0.18; text-align: center; font-size: 0.95rem; font-weight: 700; color: #c62828;'>₪{r_amt:,.2f}-</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                with p_row:
+                    st.button("🗑️", key=f"del_exp_{e_id}", help="Delete expense", on_click=delete_expense_callback, args=(e_id,))
+                        
+                st.markdown("<div style='border-bottom: 1px solid rgba(128, 128, 128, 0.1); margin: 0px 0;'></div>", unsafe_allow_html=True)
+
+    @st.dialog("➕ Add to Itinerary / Expenses")
+    def unified_trip_add_dialog(v_meta, day_key, project_folder):
+        if "add_modal_choice" not in st.session_state:
+            st.session_state.add_modal_choice = None
+
+        add_choice = st.selectbox(
+            "What would you like to add?",
+            ["Activity", "Transit between locations", "Restaurant", "Trip Expense (Shopping, Restaurant, etc.)"],
+            index=None,
+            placeholder="Select option to add...",
+            key="add_modal_choice"
+        )
+
+        # אופציה 1: הוספת אטרקציה
+        if add_choice == "Activity":
+            st.markdown("##### 🎯 Attraction Details")
+            
+            add_att_needs_key = "add_att_needs_booking"
+            add_att_booked_key = "add_att_is_booked"
+            
+            if add_att_needs_key not in st.session_state:
+                st.session_state[add_att_needs_key] = False
+            if add_att_booked_key not in st.session_state:
+                st.session_state[add_att_booked_key] = False
+
+            needs_booking = st.checkbox(
+                "🎟️ Needs to be booked in advance?", 
+                value=st.session_state[add_att_needs_key],
+                key="chk_add_att_needs",
+                on_change=lambda: st.session_state.update({add_att_needs_key: st.session_state["chk_add_att_needs"]})
+            )
+
+            is_booked = False
+            if needs_booking:
+                is_booked = st.checkbox(
+                    "✅ Already Booked / Reserved?", 
+                    value=st.session_state[add_att_booked_key],
+                    key="chk_add_att_booked",
+                    on_change=lambda: st.session_state.update({add_att_booked_key: st.session_state["chk_add_att_booked"]})
+                )
+
+            new_name = st.text_input("Description", key="add_att_name")
+            
+            c_time, c_dur = st.columns(2)
+            start_time = c_time.time_input("Start Time (Required)", value=None, key="add_att_time")
+            duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=1.0, step=0.25, key="add_att_dur")
+            
+            new_coords_str = st.text_input("📍 Location", key="add_att_coords")
+            
+            att_budget = 0.0
+            if (needs_booking and is_booked):
+                att_budget = st.number_input("💰 Budget (₪)", min_value=0.0, value=0.0, step=50.0, key="add_att_budget")
+            
+            new_notes = st.text_area("📝 Notes", key="add_att_notes")
+            
+            st.write("")
+            if st.button("Add Attraction", use_container_width=True, type="primary", key="add_att_submit"):
+                if not new_name.strip():
+                    st.error("Please enter a description.")
+                elif start_time is None:
+                    st.error("Please select a start time.")
+                else:
+                    new_item = {
+                        "name": new_name.strip(),
+                        "time": str(start_time),
+                        "duration": duration_hours,
+                        "coords": new_coords_str.strip(), 
+                        "budget": att_budget if (not needs_booking or (needs_booking and is_booked)) else 0.0,
+                        "needs_booking": needs_booking,
+                        "booked": is_booked if needs_booking else False,
+                        "notes": new_notes.strip(),
+                        "type": "attraction"
+                    }
+                    
+                    day_str = str(day_key)
+                    if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                    if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+                    
+                    v_meta["days_metadata"][day_str]["schedule"].append(new_item)
+                    save_vacation_meta(v_meta)
+                    
+                    if add_att_needs_key in st.session_state: del st.session_state[add_att_needs_key]
+                    if add_att_booked_key in st.session_state: del st.session_state[add_att_booked_key]
+                    
+                    st.success("Attraction added successfully!")
+                    st.rerun()
+
+        # אופציה 2: הוספת נסיעה 
+        elif add_choice == "Transit between locations":
+            st.markdown("##### 🚗 Transit Details")
+            
+            add_needs_key = "add_transit_needs_booking"
+            add_booked_key = "add_transit_is_booked"
+            
+            if add_needs_key not in st.session_state:
+                st.session_state[add_needs_key] = False
+            if add_booked_key not in st.session_state:
+                st.session_state[add_booked_key] = False
+
+            needs_booking = st.checkbox(
+                "🎟️ Needs to be booked in advance?", 
+                value=st.session_state[add_needs_key],
+                key="chk_add_needs_booking",
+                on_change=lambda: st.session_state.update({add_needs_key: st.session_state["chk_add_needs_booking"]})
+            )
+
+            is_booked = False
+            if needs_booking:
+                is_booked = st.checkbox(
+                    "✅ Already Booked / Reserved?", 
+                    value=st.session_state[add_booked_key],
+                    key="chk_add_is_booked",
+                    on_change=lambda: st.session_state.update({add_booked_key: st.session_state["chk_add_is_booked"]})
+                )
+
+            transit_date = st.date_input("Transit Date", value=current_nav_date, format="DD/MM/YYYY", key="add_t_date")
+            
+            c_time, c_dur = st.columns(2)
+            transit_time = c_time.time_input("Departure Time", value=None, key="add_t_time")
+            transit_duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=1.0, step=0.25, key="add_t_dur")
+            
+            st.divider()
+            
+            col_o1, col_o2 = st.columns(2)
+            origin_desc = col_o1.text_input("Origin Description", key="add_t_odesc")
+            origin_loc = col_o2.text_input("Origin Location", key="add_t_oloc")
+                
+            col_d1, col_d2 = st.columns(2)
+            dest_desc = col_d1.text_input("Destination Description", key="add_t_ddesc")
+            dest_loc = col_d2.text_input("Destination Location", key="add_t_dloc")
+            
+            st.divider()
+            
+            transit_cost = 0.0
+            if needs_booking and is_booked:
+                transit_cost = st.number_input("💰 Transit Cost (₪)", min_value=0.0, value=0.0, step=10.0, key="add_t_cost")
+            
+            transit_notes = st.text_area("📝 Notes", key="add_t_notes")
+            
+            st.write("")
+            if st.button("Add Transit", use_container_width=True, type="primary", key="add_t_submit"):
+                if not origin_desc.strip() or not dest_desc.strip():
+                    st.error("Please enter both origin and destination descriptions.")
+                elif transit_time is None:
+                    st.error("Please select a departure time.")
+                else:
+                    transit_name = f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}"
+                    
+                    new_transit_item = {
+                        "name": transit_name,
+                        "date": str(transit_date),
+                        "time": str(transit_time),
+                        "duration": transit_duration_hours,
+                        "origin_desc": origin_desc.strip(),
+                        "origin_loc": origin_loc.strip(),
+                        "dest_desc": dest_desc.strip(),
+                        "dest_loc": dest_loc.strip(),
+                        "coords": dest_loc.strip() if dest_loc.strip() else dest_desc.strip(), 
+                        "budget": transit_cost if (needs_booking and is_booked) else 0.0,
+                        "needs_booking": needs_booking,
+                        "booked": is_booked if needs_booking else False,
+                        "notes": transit_notes.strip(),
+                        "type": "transit"
+                    }
+                    
+                    target_day_str = str(transit_date)
+                    if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                    if target_day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][target_day_str]: v_meta["days_metadata"][target_day_str]["schedule"] = []
+                    
+                    v_meta["days_metadata"][target_day_str]["schedule"].append(new_transit_item)
+                    save_vacation_meta(v_meta)
+                    
+                    if add_needs_key in st.session_state: del st.session_state[add_needs_key]
+                    if add_booked_key in st.session_state: del st.session_state[add_booked_key]
+                    
+                    st.success("Transit added successfully!")
+                    st.rerun()
+
+        # אופציה 3: הוספת מסעדה
+        elif add_choice == "Restaurant":
+            with st.form("form_add_restaurant_unique"):
+                st.markdown("##### Restaurant Details")
+                rest_name = st.text_input("Restaurant Name")
+                
+                c_time, c_dur = st.columns(2)
+                rest_time = c_time.time_input("Start Time (Required)", value=None)
+                rest_duration = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=12.0, value=1.5, step=0.25)
+                
+                rest_coords = st.text_input("📍 Address")
+                is_booked = st.checkbox("✅ Table Booked / Reserved?", value=False)
+                rest_notes = st.text_area("📝 Notes")
+                
+                if st.form_submit_button("Add Restaurant", use_container_width=True, type="primary"):
+                    if not rest_name.strip():
+                        st.error("Please enter a restaurant name.")
+                    elif rest_time is None:
+                        st.error("Please select a start time.")
+                    else:
+                        new_rest_item = {
+                            "name": rest_name.strip(),
+                            "time": str(rest_time),
+                            "duration": rest_duration,
+                            "coords": rest_coords.strip(),
+                            "booked": is_booked,
+                            "budget": 0.0,  
+                            "notes": rest_notes.strip(),
+                            "type": "restaurant"
+                        }
+                        
+                        day_str = str(day_key)
+                        if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                        if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+                        
+                        v_meta["days_metadata"][day_str]["schedule"].append(new_rest_item)
+                        save_vacation_meta(v_meta)
+                        st.success("Restaurant added successfully!")
+                        st.rerun()
+
+        # אופציה 4: הוספת עסקה 
+        elif add_choice == "Trip Expense (Shopping, Restaurant, etc.)":
+            with st.form("form_add_expense_unique"):
+                st.markdown("##### Add Trip Expense")
+                
+                exp_date = st.date_input("Expense Date", value=current_nav_date, format="DD/MM/YYYY")
+                exp_type = st.selectbox("Expense Type", ["Shopping", "Restaurants", "Transportation", "Attractions", "Other"])
+                exp_desc = st.text_input("Description (e.g., Souvenir, Ramen shop)")
+                exp_amount = st.number_input("Amount (ILS)", min_value=0.0, step=10.0)
+                
+                if st.form_submit_button("Add to Expenses", use_container_width=True, type="primary"):
+                    if exp_amount > 0:
+                        expenses_file = f"{project_folder}/trip_expenses.csv"
+                        if os.path.exists(expenses_file):
+                            df_exp = pd.read_csv(expenses_file)
+                        else:
+                            df_exp = pd.DataFrame(columns=["ID", "Date", "Expense Type", "Description", "Amount"])
+                            
+                        if "ID" not in df_exp.columns or df_exp["ID"].isna().any():
+                            df_exp["ID"] = range(len(df_exp))
+                            
+                        new_row = pd.DataFrame([{
+                            "ID": int(df_exp["ID"].max() + 1) if not df_exp.empty else 0,
+                            "Date": str(exp_date),
+                            "Expense Type": exp_type,
+                            "Description": exp_desc.strip() if exp_desc else "...",
+                            "Amount": exp_amount
+                        }])
+                        df_exp = pd.concat([df_exp, new_row], ignore_index=True)
+                        df_exp.to_csv(expenses_file, index=False)
+                        st.success("Expense added to tracker successfully!")
+                        st.rerun()
+                    else:
+                        st.error("Please enter a valid amount.")
+
+    @st.dialog("✏️ Edit Transit")
+    def edit_transit_dialog(v_meta, day_key, idx, item):
+        st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
+        day_str = str(day_key)
+        
+        state_key_needs = f"edit_needs_bk_{day_str}_{idx}"
+        state_key_booked = f"edit_is_bk_{day_str}_{idx}"
+        
+        if state_key_needs not in st.session_state:
+            st.session_state[state_key_needs] = item.get('needs_booking', False)
+        if state_key_booked not in st.session_state:
+            st.session_state[state_key_booked] = item.get('booked', False)
+
+        needs_booking = st.checkbox(
+            "🎟️ Needs to be booked in advance?", 
+            value=st.session_state[state_key_needs],
+            key=f"chk_needs_{day_str}_{idx}",
+            on_change=lambda: st.session_state.update({state_key_needs: st.session_state[f"chk_needs_{day_str}_{idx}"]})
+        )
+
+        is_booked = False
+        if needs_booking:
+            is_booked = st.checkbox(
+                "✅ Already Booked / Reserved?", 
+                value=st.session_state[state_key_booked],
+                key=f"chk_booked_{day_str}_{idx}",
+                on_change=lambda: st.session_state.update({state_key_booked: st.session_state[f"chk_booked_{day_str}_{idx}"]})
+            )
+
+        st.markdown("##### Edit Transit Details")
+        
+        try:
+            def_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
+        except:
+            def_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+            
+        transit_date = st.date_input("Transit Date", value=def_date, format="DD/MM/YYYY", key=f"t_date_{day_str}_{idx}")
+        
+        c_time, c_dur = st.columns(2)
+        try:
+            def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
+        except:
+            def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
+            
+        transit_time = c_time.time_input("Departure Time", value=def_time, key=f"t_time_{day_str}_{idx}")
+        transit_duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=float(item.get('duration', 1.0)), step=0.25, key=f"t_dur_{day_str}_{idx}")
+        
+        st.divider()
+        
+        col_o1, col_o2 = st.columns(2)
+        origin_desc = col_o1.text_input("Origin Description", value=item.get('origin_desc', ''), key=f"t_odesc_{day_str}_{idx}")
+        origin_loc = col_o2.text_input("Origin Location", value=item.get('origin_loc', ''), key=f"t_oloc_{day_str}_{idx}")
+            
+        col_d1, col_d2 = st.columns(2)
+        dest_desc = col_d1.text_input("Destination Description", value=item.get('dest_desc', ''), key=f"t_ddesc_{day_str}_{idx}")
+        dest_loc = col_d2.text_input("Destination Location", value=item.get('dest_loc', ''), key=f"t_dloc_{day_str}_{idx}")
+        
+        st.divider()
+        
+        transit_cost = float(item.get('budget', 0.0))
+        if needs_booking and is_booked:
+            transit_cost = st.number_input("💰 Transit Cost (₪)", min_value=0.0, value=transit_cost, step=10.0, key=f"t_cost_{day_str}_{idx}")
+        else:
+            transit_cost = 0.0
+        
+        transit_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"t_notes_{day_str}_{idx}")
+        
+        st.write("")
+        col_save, col_del = st.columns(2)
+        
+        with col_save:
+            save_clicked = st.button("Save Changes", use_container_width=True, type="primary", key=f"t_save_{day_str}_{idx}")
+        with col_del:
+            delete_clicked = st.button("Delete", use_container_width=True, key=f"t_del_{day_str}_{idx}")
+        
+        if save_clicked:
+            if not origin_desc.strip() or not dest_desc.strip():
+                st.error("Please enter both origin and destination descriptions.")
+            elif transit_time is None:
+                st.error("Please select a departure time.")
+            else:
+                target_day_str = str(transit_date)
+                
+                updated_transit_item = {
+                    "name": f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}",
+                    "date": target_day_str,
+                    "time": str(transit_time),
+                    "duration": transit_duration_hours,
+                    "origin_desc": origin_desc.strip(),
+                    "origin_loc": origin_loc.strip(),
+                    "dest_desc": dest_desc.strip(),
+                    "dest_loc": dest_loc.strip(),
+                    "coords": dest_loc.strip() if dest_loc.strip() else dest_desc.strip(), 
+                    "budget": transit_cost if (needs_booking and is_booked) else 0.0,
+                    "needs_booking": needs_booking,
+                    "booked": is_booked if needs_booking else False,
+                    "notes": transit_notes,
+                    "type": "transit"
+                }
+                
+                if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
+                    if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
+                        v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                
+                if target_day_str not in v_meta["days_metadata"]: 
+                    v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                if "schedule" not in v_meta["days_metadata"][target_day_str]: 
+                    v_meta["days_metadata"][target_day_str]["schedule"] = []
+                        
+                v_meta["days_metadata"][target_day_str]["schedule"].append(updated_transit_item)
+                
+                save_vacation_meta(v_meta)
+                
+                if state_key_needs in st.session_state: del st.session_state[state_key_needs]
+                if state_key_booked in st.session_state: del st.session_state[state_key_booked]
+                
+                st.success("Transit updated successfully!")
+                st.rerun()
+                
+        if delete_clicked:
+            if day_str in v_meta.get("days_metadata", {}):
+                if "schedule" in v_meta["days_metadata"][day_str]:
+                    v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                    save_vacation_meta(v_meta)
+                    
+                    if state_key_needs in st.session_state: del st.session_state[state_key_needs]
+                    if state_key_booked in st.session_state: del st.session_state[state_key_booked]
+                    
+                    st.success("Deleted successfully!")
+                    st.rerun()
+
+    @st.dialog("✏️ Edit Restaurant")
+    def edit_restaurant_dialog(v_meta, day_key, idx, item):
+        day_str = str(day_key)
+        with st.form(f"edit_restaurant_form_{day_str}_{idx}"):
+            rest_name = st.text_input("Restaurant Name", value=item.get('name', ''))
+            
+            c_time, c_dur = st.columns(2)
+            try:
+                def_time = datetime.strptime(item.get('time', '12:00:00'), "%H:%M:%S").time()
+            except:
+                def_time = datetime.strptime("12:00:00", "%H:%M:%S").time()
+
+            start_time = c_time.time_input("Start Time", value=def_time)
+            rest_duration = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=12.0, value=float(item.get('duration', 1.5)), step=0.25)
+            
+            rest_coords = st.text_input("📍 Address", value=item.get('coords', ''))
+            is_booked = st.checkbox("✅ Table Booked / Reserved?", value=item.get('booked', False))
+            rest_notes = st.text_area("📝 Notes", value=item.get('notes', ''))
+            
+            col_save, col_del = st.columns(2)
+            with col_save:
+                save_clicked = st.form_submit_button("Save Changes", use_container_width=True, type="primary")
+            with col_del:
+                delete_clicked = st.form_submit_button("Delete", use_container_width=True, type="secondary")
+            
+            if save_clicked:
+                updated_item = {
+                    "name": rest_name.strip(),
+                    "time": str(start_time),
+                    "duration": rest_duration,
+                    "coords": rest_coords.strip(),
+                    "booked": is_booked,
+                    "budget": 0.0,
+                    "notes": rest_notes.strip(),
+                    "type": "restaurant"
+                }
+
+                if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+
+                v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
+                save_vacation_meta(v_meta)
+                st.success("Updated successfully!")
+                st.rerun()
+                
+            if delete_clicked:
+                if day_str in v_meta.get("days_metadata", {}):
+                    if "schedule" in v_meta["days_metadata"][day_str]:
+                        v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                        save_vacation_meta(v_meta)
+                        st.success("Deleted successfully!")
+                        st.rerun()
 
     
     # ----------------------------------------------------
@@ -2543,7 +3433,7 @@ elif st.session_state.get('authentication_status') == True:
                 st.info("No transactions file found.")
 
         # ------------------------------------------------
-        # מודול 2: תכנון חופשה (עם תמיכה במקטעים מרובי מדינות)
+        # מודול 2: תכנון חופשה
         # ------------------------------------------------
         elif current_project["type"] == "Vacation Planner":
             vacation_folder = f"{project_folder}"
@@ -2558,83 +3448,21 @@ elif st.session_state.get('authentication_status') == True:
                 return {}
 
             def save_vacation_meta(data):
+                print("Saving vacation meta to:", vacation_meta_file)  
                 with open(vacation_meta_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)
 
             vac_meta = load_vacation_meta()
 
-            countries_list = [
-                "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
-                "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
-                "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia",
-                "Denmark", "Djibouti", "Dominica", "Dominican Republic",
-                "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
-                "Fiji", "Finland", "France",
-                "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
-                "Haiti", "Honduras", "Hungary",
-                "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
-                "Jamaica", "Japan", "Jordan",
-                "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan",
-                "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
-                "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
-                "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
-                "Oman",
-                "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
-                "Qatar",
-                "Romania", "Russia", "Rwanda",
-                "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
-                "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
-                "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
-                "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
-                "Yemen",
-                "Zambia", "Zimbabwe"
-            ]
-
-            country_emojis = {
-                "Afghanistan": "🇦🇫", "Albania": "🇦🇱", "Algeria": "🇩🇿", "Andorra": "🇦🇩", "Angola": "🇦🇴", 
-                "Antigua and Barbuda": "🇦🇬", "Argentina": "🇦🇷", "Armenia": "🇦🇲", "Australia": "🇦🇺", 
-                "Austria": "🇦🇹", "Azerbaijan": "🇦🇿", "Bahamas": "🇧🇸", "Bahrain": "🇧🇭", "Bangladesh": "🇧🇩", 
-                "Barbados": "🇧🇧", "Belarus": "🇧🇾", "Belgium": "🇧🇪", "Belize": "🇧🇿", "Benin": "🇧🇯", 
-                "Bhutan": "🇧🇹", "Bolivia": "🇧🇴", "Bosnia and Herzegovina": "🇧🇦", "Botswana": "🇧🇼", 
-                "Brazil": "🇧🇷", "Brunei": "🇧🇳", "Bulgaria": "🇧🇬", "Burkina Faso": "🇧🇫", "Burundi": "🇧🇮", 
-                "Cabo Verde": "🇨🇻", "Cambodia": "🇰🇭", "Cameroon": "🇨🇲", "Canada": "🇨🇦", 
-                "Central African Republic": "🇨🇫", "Chad": "🇹🇩", "Chile": "🇨🇱", "China": "🇨🇳", 
-                "Colombia": "🇨🇴", "Comoros": "🇰🇲", "Congo": "🇨🇬", "Costa Rica": "🇨🇷", "Croatia": "🇭🇷", 
-                "Cuba": "🇨🇺", "Cyprus": "🇨🇾", "Czechia": "🇨🇿", "Denmark": "🇩🇰", "Djibouti": "🇩🇯", 
-                "Dominica": "🇩🇲", "Dominican Republic": "🇩🇴", "Ecuador": "🇪🇨", "Egypt": "🇪🇬", 
-                "El Salvador": "🇸🇻", "Equatorial Guinea": "🇬🇶", "Eritrea": "🇪🇷", "Estonia": "🇪🇪", 
-                "Eswatini": "🇸🇿", "Ethiopia": "🇪🇹", "Fiji": "🇫🇯", "Finland": "🇫🇮", "France": "🇫🇷", 
-                "Gabon": "🇬🇦", "Gambia": "🇬🇲", "Georgia": "🇬🇪", "Germany": "🇩🇪", "Ghana": "🇬🇭", 
-                "Greece": "🇬🇷", "Grenada": "🇬🇩", "Guatemala": "🇬🇹", "Guinea": "🇬🇳", "Guinea-Bissau": "🇬🇼", 
-                "Guyana": "🇬🇾", "Haiti": "🇭🇹", "Honduras": "🇭🇳", "Hungary": "🇭🇺", "Iceland": "🇮🇸", 
-                "India": "🇮🇳", "Indonesia": "🇮🇩", "Iran": "🇮🇷", "Iraq": "🇮🇶", "Ireland": "🇮🇪", 
-                "Israel": "🇮🇱", "Italy": "🇮🇹", "Jamaica": "🇯🇲", "Japan": "🇯🇵", "Jordan": "🇯🇴", 
-                "Kazakhstan": "🇰🇿", "Kenya": "🇰🇪", "Kiribati": "🇰🇮", "Kuwait": "🇰🇼", "Kyrgyzstan": "🇰🇬", 
-                "Laos": "🇱🇦", "Latvia": "🇱🇻", "Lebanon": "🇱🇧", "Lesotho": "🇱🇸", "Liberia": "🇱🇷", 
-                "Libya": "🇱🇾", "Liechtenstein": "🇱🇮", "Lithuania": "🇱🇹", "Luxembourg": "🇱🇺", 
-                "Madagascar": "🇲🇬", "Malawi": "🇲🇼", "Malaysia": "🇲🇾", "Maldives": "🇲🇻", "Mali": "🇲🇱", 
-                "Malta": "🇲🇹", "Marshall Islands": "🇲🇭", "Mauritania": "🇲🇷", "Mauritius": "🇲🇺", 
-                "Mexico": "🇲🇽", "Micronesia": "🇫🇲", "Moldova": "🇲🇩", "Monaco": "🇲🇨", "Mongolia": "🇲🇳", 
-                "Montenegro": "🇲🇪", "Morocco": "🇲🇦", "Mozambique": "🇲🇿", "Myanmar": "🇲🇲", "Namibia": "🇳🇦", 
-                "Nauru": "🇳🇷", "Nepal": "🇳🇵", "Netherlands": "🇳🇱", "New Zealand": "🇳🇿", "Nicaragua": "🇳🇮", 
-                "Niger": "🇳🇪", "Nigeria": "🇳🇬", "North Korea": "🇰🇵", "North Macedonia": "🇲🇰", "Norway": "🇳🇴", 
-                "Oman": "🇴🇲", "Pakistan": "🇵🇰", "Palau": "🇵🇼", "Palestine": "🇵🇸", "Panama": "🇵🇦", 
-                "Papua New Guinea": "🇵🇬", "Paraguay": "🇵🇾", "Peru": "🇵🇪", "Philippines": "🇵🇭", 
-                "Poland": "🇵🇱", "Portugal": "🇵🇹", "Qatar": "🇶🇦", "Romania": "🇷🇴", "Russia": "🇷🇺", 
-                "Rwanda": "🇷🇼", "Saint Kitts and Nevis": "🇰🇳", "Saint Lucia": "🇱🇨", 
-                "Saint Vincent and the Grenadines": "🇻🇨", "Samoa": "🇼🇸", "San Marino": "🇸🇲", 
-                "Sao Tome and Principe": "🇸🇹", "Saudi Arabia": "🇸🇦", "Senegal": "🇸🇳", "Serbia": "🇷🇸", 
-                "Seychelles": "🇸🇨", "Sierra Leone": "🇸🇱", "Singapore": "🇸🇬", "Slovakia": "🇸🇰", 
-                "Slovenia": "🇸🇮", "Solomon Islands": "🇸🇧", "Somalia": "🇸🇴", "South Africa": "🇿🇦", 
-                "South Korea": "🇰🇷", "South Sudan": "🇸🇸", "Spain": "🇪🇸", "Sri Lanka": "🇱🇰", 
-                "Sudan": "🇸🇩", "Suriname": "🇸🇷", "Sweden": "🇸🇪", "Switzerland": "🇨🇭", "Syria": "🇸🇾", 
-                "Taiwan": "🇹🇼", "Tajikistan": "🇹🇯", "Tanzania": "🇹🇿", "Thailand": "🇹🇭", "Timor-Leste": "🇹🇱", 
-                "Togo": "🇹🇬", "Tonga": "🇹🇴", "Trinidad and Tobago": "🇹🇹", "Tunisia": "🇹🇳", "Turkey": "🇹🇷", 
-                "Turkmenistan": "🇹🇲", "Tuvalu": "🇹🇻", "Uganda": "🇺🇬", "Ukraine": "🇺🇦", 
-                "United Arab Emirates": "🇦🇪", "United Kingdom": "🇬🇧", "United States": "🇺🇸", 
-                "Uruguay": "🇺🇾", "Uzbekistan": "🇺🇿", "Vanuatu": "🇻🇺", "Vatican City": "🇻🇦", 
-                "Venezuela": "🇻🇪", "Vietnam": "🇻🇳", "Yemen": "🇾🇪", "Zambia": "🇿🇲", "Zimbabwe": "🇿🇼"
-            }
+            if st.session_state.get("open_dialog") == "edit_settings":
+                st.session_state["open_dialog"] = None
+                edit_trip_settings_dialog(vac_meta)
+            elif st.session_state.get("open_dialog") == "overview":
+                st.session_state["open_dialog"] = None
+                trip_overview_dialog(vac_meta, project_folder)
+            elif st.session_state.get("open_dialog") == "expenses":
+                st.session_state["open_dialog"] = None
+                trip_expenses_dialog(project_folder, vac_meta)
 
             selected_countries = vac_meta.get("countries", [])
             if not selected_countries and "country" in vac_meta and vac_meta["country"] != "Select Country...":
@@ -2710,7 +3538,7 @@ elif st.session_state.get('authentication_status') == True:
                     segments_data = []
                     if len(selected_countries) > 1:
                         st.markdown("---")
-                        st.markdown("##### 🗺️ Trip Segments (Multi-Country Split):")
+                        st.markdown("##### Trip Segments (Multi-Country Split):")
                         
                         if f"num_segments_{current_project['id']}" not in st.session_state:
                             st.session_state[f"num_segments_{current_project['id']}"] = 1
@@ -2798,6 +3626,7 @@ elif st.session_state.get('authentication_status') == True:
             #-------------------------------------
             # שלב ג': מסך החופשה הראשי
             #-------------------------------------
+
             else:
                 trip_start = datetime.strptime(vac_meta["start_date"], "%Y-%m-%d").date()
                 trip_end = datetime.strptime(vac_meta["end_date"], "%Y-%m-%d").date()
@@ -2816,7 +3645,6 @@ elif st.session_state.get('authentication_status') == True:
                 day_number = (current_nav_date - trip_start).days + 1
                 current_day_key = str(current_nav_date)
 
-                # שליפת המדינה ששויכה ליום הנוכחי (או ברירת מחדל למדינה הראשונה)
                 default_c = selected_countries[0] if selected_countries else "Japan"
                 if "days_metadata" not in vac_meta: vac_meta["days_metadata"] = {}
                 if current_day_key not in vac_meta["days_metadata"]: vac_meta["days_metadata"][current_day_key] = {}
@@ -2829,8 +3657,8 @@ elif st.session_state.get('authentication_status') == True:
 
                 col_c1, col_c2, col_c3 = st.columns([1, 4, 1])
                 with col_c2:
-                    if st.button(f"{flag_emoji}  {day_country.upper()}  {flag_emoji}", key="pure_title_btn", use_container_width=True, help="Click to edit trip settings"):
-                        edit_trip_settings_dialog(vac_meta)
+                    if st.button(f"{flag_emoji}  {day_country.upper()}  {flag_emoji}", key="pure_title_btn", use_container_width=True, help="Click to open trip menu"):
+                        trip_menu_dialog(vac_meta, project_folder)
 
                 st.divider()
                 
@@ -2860,19 +3688,14 @@ elif st.session_state.get('authentication_status') == True:
                 with c_n:
                     st.button("›", key="btn_float_n", on_click=next_day_cb, help="Next Day")
             
-                if "schedule" not in vac_meta: vac_meta["schedule"] = {}
-                if current_day_key not in vac_meta["schedule"]: vac_meta["schedule"][current_day_key] = []
-
-                if current_day_key not in vac_meta["days_metadata"]:
-                    vac_meta["days_metadata"][current_day_key] = {
-                        "hotel": "",
-                        "wake_up": "08:00",
-                        "notes": "",
-                        "country": day_country
-                    }
+                if "days_metadata" not in vac_meta: vac_meta["days_metadata"] = {}
+                if current_day_key not in vac_meta["days_metadata"]: 
+                    vac_meta["days_metadata"][current_day_key] = {"notes_list": [], "schedule": []}
+                if "schedule" not in vac_meta["days_metadata"][current_day_key]:
+                    vac_meta["days_metadata"][current_day_key]["schedule"] = []
 
                 current_day_meta = vac_meta["days_metadata"][current_day_key]
-                day_schedule = vac_meta["schedule"][current_day_key]
+                day_schedule = vac_meta["days_metadata"][current_day_key]["schedule"]
 
                 col_schedule, col_overview = st.columns([1.3, 1], gap="large")
 
@@ -2961,33 +3784,184 @@ elif st.session_state.get('authentication_status') == True:
                             }
                         </style>
                         """, unsafe_allow_html=True)
-                        
+
                         for idx, item in enumerate(day_schedule):
+                            item_type = item.get('type', 'attraction')
+                            
+                            if item_type == 'transit':
+                                border_color = "#29b6f6"  
+                            elif item_type == 'restaurant':
+                                border_color = "#ef5350" 
+                            else:
+                                border_color = "#66bb6a"  
+                            
                             with st.container(border=True):
-                                c_content, c_edit = st.columns([0.93, 0.07], vertical_alignment="center")
+                                st.markdown(f"""
+                                    <style>
+                                        div[data-testid='stVerticalBlock']:has(> div.element-container .card-marker-{idx}) {{
+                                            border: 2px solid {border_color} !important;
+                                            border-radius: 10px !important;
+                                        }}
+                                        div[data-testid='stVerticalBlock']:has(> div.element-container .card-marker-{idx}) div.stVerticalBlock {{
+                                            gap: 0rem !important;
+                                            margin-top: -17px
+                                        }}
+                                    </style>
+                                    <div class="card-marker-{idx}" style="display:none; margin:0; padding:0;"></div>
+                                """, unsafe_allow_html=True)
                                 
-                                start_time_str = item['time'][:5]
-                                duration_val = item.get('duration', 0)
-                                loc_display = item.get('coords', item.get('location', ''))
-                                
-                                with c_content:
-                                    st.markdown(f"""
-                                        <div class="attr-card-row">
-                                            <div class="attr-time-col">
-                                                <span class="attr-start-time">{start_time_str}</span>
-                                                <div class="attr-duration">Duration:<br><b>{duration_val} hrs</b></div>
+                                if item_type == 'transit':
+                                    needs_booking = item.get('needs_booking', False)
+                                    is_booked = item.get('booked', False)
+                                    cost = item.get('budget', 0)
+                                    
+                                    c_time, c_info, c_cost, c_map, c_edit = st.columns([0.15, 0.55, 0.2, 0.05, 0.05], vertical_alignment="center")
+                                    
+                                    with c_time:
+                                        dep_time = item.get('time', '00:00')[:5]
+                                        st.markdown(f"""
+                                            <div style='text-align: center; margin-bottom: 34px; display: flex; flex-direction: column; justify-content: center; height: 100%;'>
+                                                <div style='font-size: 0.75rem; opacity: 0.6; font-weight: 500; margin-bottom: 2px;'>Departure</div>
+                                                <div style='font-size: 1.25rem; font-weight: 800; line-height: 1.2;'>{dep_time}</div>
                                             </div>
-                                            <div class="attr-info-col">
-                                                <div class="attr-name">{item.get('name')}</div>
-                                                <div class="attr-loc">{loc_display}</div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                    with c_info:
+                                        orig_desc = item.get('origin_desc', 'Origin')
+                                        orig_loc = item.get('origin_loc', '')
+                                        dest_desc = item.get('dest_desc', 'Destination')
+                                        dest_loc = item.get('dest_loc', '')
+                                        dur = item.get('duration', 1.0)
+                                        
+                                        st.markdown(f"""
+                                            <div style='text-align: center; margin-bottom: 17px;'>
+                                                <div style='font-size: 1.0rem; font-weight: 700;'>{orig_desc}</div>
+                                                <div style='font-size: 0.75rem; opacity: 0.7;'>{orig_loc}</div>
+                                                <div class="attr-duration" style='text-align: center; color: #c62828; margin: 4px auto; display: inline-block;'>Duration:<br><b>{dur} hrs</b></div>
+                                                <div style='font-size: 1.0rem; font-weight: 700;'>{dest_desc}</div>
+                                                <div style='font-size: 0.75rem; opacity: 0.7;'>{dest_loc}</div>
                                             </div>
-                                            <div class="attr-budget-col">₪{item.get('budget', 0)}</div>
-                                        </div>
-                                    """, unsafe_allow_html=True)
-                                
-                                with c_edit:
-                                    if st.button("✏️", key=f"edit_attr_{current_day_key}_{idx}", help="Edit Attraction"):
-                                        edit_attraction_dialog(vac_meta, current_day_key, idx, item)
+                                        """, unsafe_allow_html=True)
+
+                                    with c_cost:
+                                        if needs_booking:
+                                            if is_booked:
+                                                st.markdown(f"<div style='text-align: center; margin-bottom: 17px; font-weight: 800;'>₪{cost}</div>", unsafe_allow_html=True)
+                                            else:
+                                                st.markdown(f"<div style='text-align: center; margin-bottom: 17px; font-size: 0.85rem; color: #d32f2f; font-weight: 600;'>Not Booked</div>", unsafe_allow_html=True)
+                                        else:
+                                            st.markdown("<div style='text-align: center; margin-bottom: 17px;'></div>", unsafe_allow_html=True)
+                                        
+                                    with c_map:
+                                        orig_target = item.get('origin_loc') if item.get('origin_loc') else orig_desc
+                                        dest_target = item.get('dest_loc') if item.get('dest_loc') else dest_desc
+                                        gmap_url = f"https://www.google.com/maps/dir/?api=1&origin={orig_target.strip().replace(' ', '+')}&destination={dest_target.strip().replace(' ', '+')}"
+                                        
+                                        st.markdown(f"""
+                                            <div style='text-align: center; margin-bottom: 17px;'>
+                                                <a href='{gmap_url}' target='_blank' class='hover-scale' style='font-size: 1.2rem; text-decoration: none;' title='Navigate'>📍</a>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                    with c_edit:
+                                        st.markdown("<div class='hover-scale' style='text-align: center;'>", unsafe_allow_html=True)
+                                        if st.button("✏️", key=f"edit_transit_{current_day_key}_{idx}", help="Edit Transit"):
+                                            edit_transit_dialog(vac_meta, current_day_key, idx, item)
+                                        st.markdown("<div style='text-align: center; margin-bottom: 28px;'></div>", unsafe_allow_html=True)
+
+                                elif item_type == 'restaurant':
+                                    c_time, c_info, c_booked, c_map, c_edit = st.columns([0.15, 0.55, 0.2, 0.05, 0.05], vertical_alignment="center")
+                                    start_time_str = item['time'][:5]
+                                    duration_val = item.get('duration', 1.5)
+                                    rest_name = item.get('name', 'Restaurant')
+                                    rest_notes = item.get('notes', '')
+                                    is_booked = item.get('booked', False)
+                                    loc_display = item.get('coords', '')
+                                    
+                                    with c_time:
+                                        st.markdown(f"""
+                                            <div style='text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;'>
+                                                <span style='font-size: 1.25rem; font-weight: 800; display: block; text-align: center; margin-bottom: -10px;'>{start_time_str}</span>
+                                                <div style='display: flex; justify-content: center; width: 100%; margin-bottom: 10px;'>
+                                                    <div class="attr-duration" style='text-align: center; font-size: 0.6rem; display: inline-block; transform: translateX(-3px);'>Duration:<br><b>{duration_val} hrs</b></div>
+                                                </div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                    with c_info:
+                                        st.markdown(f"""
+                                            <div style='text-align: center;'>
+                                                <div style='font-size: 1.0rem; font-weight: 700;'>🍽️ {rest_name}</div>
+                                                <div style='font-size: 0.75rem; opacity: 0.7; margin-bottom: 15px;'>{rest_notes}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    with c_booked:
+                                        booked_badge = "<span style='color: #2e7d32; font-weight: 800;'>✓ Booked</span>" if is_booked else "<span style='color: #d32f2f; font-weight: 600;'>Not Booked</span>"
+                                        st.markdown(f"<div style='text-align: center; margin-bottom: 15px; font-size: 0.9rem;'>{booked_badge}</div>", unsafe_allow_html=True)
+                                        
+                                    with c_map:
+                                        map_target = loc_display if loc_display else rest_name
+                                        gmap_url = f"https://www.google.com/maps/search/?api=1&query={map_target.strip().replace(' ', '+')}"
+                                        st.markdown(f"""
+                                            <div style='text-align: center; margin-bottom: 15px;'>
+                                                <a href='{gmap_url}' target='_blank' class='hover-scale' style='font-size: 1.2rem; text-decoration: none;' title='View location in Google Maps'>📍</a>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    
+                                    with c_edit:
+                                        st.markdown("<div style='margin-bottom: -100px;'></div>", unsafe_allow_html=True)
+                                        if st.button("✏️", key=f"edit_rest_{current_day_key}_{idx}", help="Edit Restaurant"):
+                                            edit_restaurant_dialog(vac_meta, current_day_key, idx, item)
+
+                                else:
+                                    needs_booking = item.get('needs_booking', False)
+                                    is_booked = item.get('booked', False)
+                                    cost = item.get('budget', 0)
+                                    
+                                    c_time, c_info, c_cost, c_map, c_edit = st.columns([0.15, 0.55, 0.2, 0.05, 0.05], vertical_alignment="center")
+                                    
+                                    with c_time:
+                                        st.markdown(f"""
+                                            <div style='text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;'>
+                                                <span style='font-size: 1.25rem; font-weight: 800; display: block; text-align: center; margin-bottom: -10px;'>{item['time'][:5]}</span>
+                                                <div style='display: flex; justify-content: center; width: 100%; margin-bottom: 10px;'>
+                                                    <div class="attr-duration" style='text-align: center; font-size: 0.6rem; display: inline-block; transform: translateX(-3px);'>Duration:<br><b>{item.get('duration', 0)} hrs</b></div>
+                                                </div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                    with c_info:
+                                        st.markdown(f"""
+                                            <div style='text-align: center;'>
+                                                <div style='font-size: 1.0rem; font-weight: 700;'>{item.get('name', 'Attraction')}</div>
+                                                <div style='font-size: 0.75rem; opacity: 0.7; margin-bottom: 15px;'>{item.get('notes', '')}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    with c_cost:
+                                        if needs_booking:
+                                            if is_booked:
+                                                st.markdown(f"<div style='text-align: center; margin-bottom: 15px; font-weight: 800;'>₪{cost}</div>", unsafe_allow_html=True)
+                                            else:
+                                                st.markdown(f"<div style='text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #d32f2f; font-weight: 600;'>Not Booked</div>", unsafe_allow_html=True)
+                                        else:
+                                            st.markdown("<div style='text-align: center; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+                                        
+                                    with c_map:
+                                        loc_display = item.get('coords', item.get('location', ''))
+                                        map_target = loc_display if loc_display else item.get('name', 'Attraction')
+                                        gmap_url = f"https://www.google.com/maps/search/?api=1&query={map_target.strip().replace(' ', '+')}"
+                                        st.markdown(f"""
+                                            <div style='text-align: center; margin-bottom: 15px;'>
+                                                <a href='{gmap_url}' target='_blank' class='hover-scale' style='font-size: 1.2rem; text-decoration: none;' title='View location in Google Maps'>📍</a>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    
+                                    with c_edit:
+                                        st.markdown("<div style='margin-bottom: -100px;'></div>", unsafe_allow_html=True)
+                                        if st.button("✏️", key=f"edit_attr_{current_day_key}_{idx}", help="Edit Attraction"):
+                                            edit_attraction_dialog(vac_meta, current_day_key, idx, item)
 
                 #------------------------------------------
                 # צד ימין: Day Overview
@@ -3134,7 +4108,7 @@ elif st.session_state.get('authentication_status') == True:
                         with st.container(border=True):
                             st.markdown("<div style='font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;'>🗺️ Map & Daily Route</div>", unsafe_allow_html=True)
                             
-                            schedule = vac_meta.get("schedule", {}).get(str(current_day_key), [])
+                            schedule = vac_meta.get("days_metadata", {}).get(str(current_day_key), {}).get("schedule", [])
                             if schedule:
                                 schedule = sorted(schedule, key=lambda x: x['time'])
 
@@ -3145,33 +4119,26 @@ elif st.session_state.get('authentication_status') == True:
                                     active_hotel = h
                                     break
                             
-                            attraction_locations = []
-                            for item in schedule:
-                                loc = item.get("coords") or item.get("location") or item.get("name")
-                                if loc and loc.strip():
-                                    attraction_locations.append(loc.strip())
-                            
                             if active_hotel and active_hotel.get('address'):
                                 map_location = active_hotel['address']
-                            elif attraction_locations:
-                                map_location = attraction_locations[0]
                             else:
                                 map_location = day_country
                             
                             embed_url = f"https://www.google.com/maps?q={map_location.strip().replace(' ', '+')}&output=embed"
                             st.components.v1.iframe(embed_url, height=150, scrolling=False)
                             
+                            attraction_locations = []
+                            for item in schedule:
+                                if item.get("type") == "transit":
+                                    continue
+                                loc = item.get("coords") or item.get("location") or item.get("name")
+                                if loc and loc.strip():
+                                    attraction_locations.append(loc.strip())
+                            
                             if attraction_locations:
-                                hotel_addr = active_hotel.get('address') if (active_hotel and active_hotel.get('address')) else None
-                                
-                                if hotel_addr:
-                                    origin = hotel_addr
-                                    destination = attraction_locations[-1]
-                                    waypoints = attraction_locations[:-1] 
-                                else:
-                                    origin = attraction_locations[0]
-                                    destination = attraction_locations[-1] if len(attraction_locations) > 1 else attraction_locations[0]
-                                    waypoints = attraction_locations[1:-1]
+                                origin = attraction_locations[0]
+                                destination = attraction_locations[-1] if len(attraction_locations) > 1 else attraction_locations[0]
+                                waypoints = attraction_locations[1:-1]
                                 
                                 base_dir_url = f"https://www.google.com/maps/dir/?api=1&origin={origin.replace(' ', '+')}&destination={destination.replace(' ', '+')}"
                                 if waypoints:
@@ -3180,7 +4147,8 @@ elif st.session_state.get('authentication_status') == True:
                                 
                                 gmaps_route_link = base_dir_url
                             else:
-                                gmaps_route_link = f"https://www.google.com/maps/search/?api=1&query={map_location.replace(' ', '+')}"
+                                fallback_target = active_hotel['address'] if (active_hotel and active_hotel.get('address')) else day_country
+                                gmaps_route_link = f"https://www.google.com/maps/search/?api=1&query={fallback_target.replace(' ', '+')}"
 
                             st.markdown("""
                                 <style>
@@ -3214,8 +4182,8 @@ elif st.session_state.get('authentication_status') == True:
                             btn_text = "🚗 Open Today's Full Route in Google Maps" if len(attraction_locations) > 1 else "📍 View Location in Google Maps"
                             st.link_button(btn_text, gmaps_route_link, use_container_width=True)
 
-                if st.button("➕ Add Attraction", key="fab_attraction", help="Add a new attraction"):
-                    add_attraction_dialog(vac_meta, current_nav_date)
+                if st.button("➕ Add", key="fab_attraction", help="Add attraction, transit, or expense"):
+                    unified_trip_add_dialog(vac_meta, current_nav_date, project_folder)
         # ------------------------------------------------
         # מודול שכר שעה 
         # ------------------------------------------------
