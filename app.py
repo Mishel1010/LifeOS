@@ -681,6 +681,16 @@ MONTH_TO_NUM = {
 }
 NUM_TO_MONTH = {v: k for k, v in MONTH_TO_NUM.items()}
 
+months = list(MONTH_TO_NUM.keys())
+current_year = datetime.now().year
+years = list(range(2025, current_year + 50))
+
+if "select_month_box" not in st.session_state:
+    st.session_state.select_month_box = months[datetime.now().month - 1]
+
+if "select_year_box" not in st.session_state:
+    st.session_state.select_year_box = current_year if current_year in years else years[0]
+
 countries_list = [
     "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
     "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
@@ -825,6 +835,23 @@ def edit_user_profile_dialog(username, config_data):
             
             st.success("Profile updated successfully!")
             st.rerun()
+    
+def format_duration(hours_float):
+    try:
+        total_minutes = int(round(float(hours_float) * 60))
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        
+        if hours == 0 and minutes == 0:
+            return "0 min"
+        elif minutes == 0:
+            return f"{hours} hrs"
+        elif hours == 0:
+            return f"{minutes} mins"
+        else:
+            return f"{hours} hrs<br>{minutes:02d} mins"
+    except:
+        return "1 hour"
 
 #------------------------------------------------------
 # אתחול מערכת ההזדהות
@@ -1309,16 +1336,6 @@ elif st.session_state.get('authentication_status') == True:
                     save_expense_categories(cats_file, groups)
                     st.rerun()
 
-    months = list(MONTH_TO_NUM.keys())
-    current_year = datetime.now().year
-    years = list(range(2025, current_year + 50))
-
-    if "select_month_box" not in st.session_state:
-        st.session_state.select_month_box = months[datetime.now().month - 1]
-
-    if "select_year_box" not in st.session_state:
-        st.session_state.select_year_box = current_year if current_year in years else years[0]
-
     @st.dialog("Select Date")
     def open_date_dialog():
         new_month = st.selectbox("Month", months, index=months.index(st.session_state.select_month_box))
@@ -1721,6 +1738,7 @@ elif st.session_state.get('authentication_status') == True:
                         del st.session_state[edit_state_key]
                         
                     st.rerun()
+
     @st.dialog("📅 Jump to Day")
     def jump_to_day_dialog(trip_start, trip_end, vac_meta):
         if trip_start == trip_end:
@@ -1876,155 +1894,119 @@ elif st.session_state.get('authentication_status') == True:
         st.markdown("#### 📂 Trip Documents Manager")
         render_document_manager(f"{project_folder}/documents", can_edit=True, show_download=False)
 
-    @st.dialog("➕ Add New Attraction")
-    def add_attraction_dialog(v_meta, day_key):
-        day_str = str(day_key)
-        with st.form("add_attraction_form"):
-            new_name = st.text_input("Description")
+    @st.dialog("✏️ Edit Attraction")
+    def edit_attraction_dialog(v_meta, day_key, idx, item):
+        with st.container(border=True):
+            st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
+            day_str = str(day_key)
             
-            c_time, c_dur = st.columns(2)
-            start_time = c_time.time_input("Start Time (Required)", value=None, help="Please select a time for this attraction")
+            state_key_needs = f"edit_att_needs_{day_str}_{idx}"
+            state_key_booked = f"edit_att_booked_{day_str}_{idx}"
             
-            duration_options = [
-                "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", 
-                "03:30", "04:00", "05:00", "06:00", "08:00", "10:00", "12:00"
-            ]
-            selected_duration_str = c_dur.selectbox("Duration (Hours:Minutes)", options=duration_options, index=3)
+            if state_key_needs not in st.session_state:
+                st.session_state[state_key_needs] = item.get('needs_booking', False)
+            if state_key_booked not in st.session_state:
+                st.session_state[state_key_booked] = item.get('booked', False)
+
+            needs_booking = st.checkbox(
+                "🎟️ Needs to be booked in advance?", 
+                value=st.session_state[state_key_needs],
+                key=f"chk_att_needs_{day_str}_{idx}",
+                on_change=lambda: st.session_state.update({state_key_needs: st.session_state[f"chk_att_needs_{day_str}_{idx}"]})
+            )
+
+            is_booked = False
+            if needs_booking:
+                is_booked = st.checkbox(
+                    "✅ Already Booked / Reserved?", 
+                    value=st.session_state[state_key_booked],
+                    key=f"chk_att_booked_{day_str}_{idx}",
+                    on_change=lambda: st.session_state.update({state_key_booked: st.session_state[f"chk_att_booked_{day_str}_{idx}"]})
+                )
+
+            new_name = st.text_input("Description", value=item.get('name', ''), key=f"att_name_{day_str}_{idx}")
             
-            new_coords_str = st.text_input("📍 Location")
-            new_budget = st.number_input("💰 Budget (₪)", min_value=0, value=0, step=50)
-            new_notes = st.text_area("📝 Notes")
+            try:
+                def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
+            except:
+                def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
+
+            start_time = st.time_input("Start Time", value=def_time, key=f"att_time_{day_str}_{idx}")
             
-            if st.form_submit_button("Add Attraction", use_container_width=True, type="primary"):
+            curr_dur_val = float(item.get('duration', 2.0))
+            def_hrs = int(curr_dur_val)
+            def_mins = int(round((curr_dur_val - def_hrs) * 60))
+            valid_mins = [0, 15, 30, 45]
+            min_idx = valid_mins.index(def_mins) if def_mins in valid_mins else 0
+
+            col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
+            with col_lbl:
+                    st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
+                
+            dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"att_hrs_{day_str}_{idx}")
+            dur_mins = col_min.selectbox("minutes", options=valid_mins, index=min_idx, key=f"att_mins_{day_str}_{idx}")
+            duration_hours = dur_hours + (dur_mins / 60.0)
+            
+            new_coords_str = st.text_input("📍 Location", value=item.get('coords', ''), key=f"att_coords_{day_str}_{idx}")
+            
+            att_budget = float(item.get('budget', 0.0))
+            if (needs_booking and is_booked):
+                att_budget = st.number_input("💰 Budget (₪)", min_value=0.0, value=att_budget, step=50.0, key=f"att_budget_{day_str}_{idx}")
+            else:
+                att_budget = 0.0
+
+            new_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"att_notes_{day_str}_{idx}")
+            
+            st.write("")
+            col_save, col_del = st.columns(2)
+            
+            with col_save:
+                save_clicked = st.button("Save Changes", use_container_width=True, type="primary", key=f"att_save_{day_str}_{idx}")
+            with col_del:
+                delete_clicked = st.button("Delete", use_container_width=True, key=f"att_del_{day_str}_{idx}")
+            
+            if save_clicked:
                 if not new_name.strip():
                     st.error("Please enter a description.")
                 elif start_time is None:
-                    st.error("Please select a start time for the attraction.")
+                    st.error("Please select a start time.")
                 else:
-                    parts = selected_duration_str.split(":")
-                    duration_hours = int(parts[0]) + int(parts[1]) / 60.0
-
-                    new_item = {
-                        "name": new_name,
+                    updated_item = {
+                        "name": new_name.strip(),
                         "time": str(start_time),
                         "duration": duration_hours,
-                        "coords": new_coords_str.strip(), 
-                        "budget": new_budget,
-                        "notes": new_notes
+                        "coords": new_coords_str.strip(),
+                        "budget": att_budget if (needs_booking and is_booked) else 0.0,
+                        "needs_booking": needs_booking,
+                        "booked": is_booked if needs_booking else False,
+                        "notes": new_notes.strip(),
+                        "type": "attraction"
                     }
-                    
-                    if "days_metadata" not in v_meta: 
-                        v_meta["days_metadata"] = {}
-                    if day_str not in v_meta["days_metadata"]: 
-                        v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
-                    if "schedule" not in v_meta["days_metadata"][day_str]: 
-                        v_meta["days_metadata"][day_str]["schedule"] = []
-                    
-                    v_meta["days_metadata"][day_str]["schedule"].append(new_item)
-                    save_vacation_meta(v_meta)
-                    st.success("Added successfully!")
-                    st.rerun()
 
-    @st.dialog("✏️ Edit Attraction")
-    def edit_attraction_dialog(v_meta, day_key, idx, item):
-        st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
-        day_str = str(day_key)
-        
-        state_key_needs = f"edit_att_needs_{day_str}_{idx}"
-        state_key_booked = f"edit_att_booked_{day_str}_{idx}"
-        
-        if state_key_needs not in st.session_state:
-            st.session_state[state_key_needs] = item.get('needs_booking', False)
-        if state_key_booked not in st.session_state:
-            st.session_state[state_key_booked] = item.get('booked', False)
+                    if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                    if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
 
-        needs_booking = st.checkbox(
-            "🎟️ Needs to be booked in advance?", 
-            value=st.session_state[state_key_needs],
-            key=f"chk_att_needs_{day_str}_{idx}",
-            on_change=lambda: st.session_state.update({state_key_needs: st.session_state[f"chk_att_needs_{day_str}_{idx}"]})
-        )
-
-        is_booked = False
-        if needs_booking:
-            is_booked = st.checkbox(
-                "✅ Already Booked / Reserved?", 
-                value=st.session_state[state_key_booked],
-                key=f"chk_att_booked_{day_str}_{idx}",
-                on_change=lambda: st.session_state.update({state_key_booked: st.session_state[f"chk_att_booked_{day_str}_{idx}"]})
-            )
-
-        new_name = st.text_input("Description", value=item.get('name', ''), key=f"att_name_{day_str}_{idx}")
-        
-        c_time, c_dur = st.columns(2)
-        try:
-            def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
-        except:
-            def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
-
-        start_time = c_time.time_input("Start Time", value=def_time, key=f"att_time_{day_str}_{idx}")
-        duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=float(item.get('duration', 2.0)), step=0.25, key=f"att_dur_{day_str}_{idx}")
-        
-        new_coords_str = st.text_input("📍 Location", value=item.get('coords', ''), key=f"att_coords_{day_str}_{idx}")
-        
-        att_budget = float(item.get('budget', 0.0))
-        if (needs_booking and is_booked):
-            att_budget = st.number_input("💰 Budget (₪)", min_value=0.0, value=att_budget, step=50.0, key=f"att_budget_{day_str}_{idx}")
-        else:
-            att_budget = 0.0
-
-        new_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"att_notes_{day_str}_{idx}")
-        
-        st.write("")
-        col_save, col_del = st.columns(2)
-        
-        with col_save:
-            save_clicked = st.button("Save Changes", use_container_width=True, type="primary", key=f"att_save_{day_str}_{idx}")
-        with col_del:
-            delete_clicked = st.button("Delete", use_container_width=True, key=f"att_del_{day_str}_{idx}")
-        
-        if save_clicked:
-            if not new_name.strip():
-                st.error("Please enter a description.")
-            elif start_time is None:
-                st.error("Please select a start time.")
-            else:
-                updated_item = {
-                    "name": new_name.strip(),
-                    "time": str(start_time),
-                    "duration": duration_hours,
-                    "coords": new_coords_str.strip(),
-                    "budget": att_budget if (needs_booking and is_booked) else 0.0,
-                    "needs_booking": needs_booking,
-                    "booked": is_booked if needs_booking else False,
-                    "notes": new_notes.strip(),
-                    "type": "attraction"
-                }
-
-                if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
-                if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
-
-                v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
-                save_vacation_meta(v_meta)
-                
-                if state_key_needs in st.session_state: del st.session_state[state_key_needs]
-                if state_key_booked in st.session_state: del st.session_state[state_key_booked]
-                
-                st.success("Updated successfully!")
-                st.rerun()
-                
-        if delete_clicked:
-            if day_str in v_meta.get("days_metadata", {}):
-                if "schedule" in v_meta["days_metadata"][day_str]:
-                    v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                    v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
                     save_vacation_meta(v_meta)
                     
                     if state_key_needs in st.session_state: del st.session_state[state_key_needs]
                     if state_key_booked in st.session_state: del st.session_state[state_key_booked]
                     
-                    st.success("Deleted successfully!")
+                    st.success("Updated successfully!")
                     st.rerun()
+                    
+            if delete_clicked:
+                if day_str in v_meta.get("days_metadata", {}):
+                    if "schedule" in v_meta["days_metadata"][day_str]:
+                        v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                        save_vacation_meta(v_meta)
+                        
+                        if state_key_needs in st.session_state: del st.session_state[state_key_needs]
+                        if state_key_booked in st.session_state: del st.session_state[state_key_booked]
+                        
+                        st.success("Deleted successfully!")
+                        st.rerun()
 
     @st.dialog("🏨 Hotel Details & Dates")
     def hotel_details_dialog(v_meta, current_date, active_hotel):
@@ -2421,170 +2403,193 @@ elif st.session_state.get('authentication_status') == True:
 
         # אופציה 1: הוספת אטרקציה
         if add_choice == "Activity":
-            st.markdown("##### 🎯 Attraction Details")
-            
-            add_att_needs_key = "add_att_needs_booking"
-            add_att_booked_key = "add_att_is_booked"
-            
-            if add_att_needs_key not in st.session_state:
-                st.session_state[add_att_needs_key] = False
-            if add_att_booked_key not in st.session_state:
-                st.session_state[add_att_booked_key] = False
+            with st.container(border=True):
+                st.markdown("##### 🎯 Attraction Details")
+                
+                add_att_needs_key = "add_att_needs_booking"
+                add_att_booked_key = "add_att_is_booked"
+                
+                if add_att_needs_key not in st.session_state:
+                    st.session_state[add_att_needs_key] = False
+                if add_att_booked_key not in st.session_state:
+                    st.session_state[add_att_booked_key] = False
 
-            needs_booking = st.checkbox(
-                "🎟️ Needs to be booked in advance?", 
-                value=st.session_state[add_att_needs_key],
-                key="chk_add_att_needs",
-                on_change=lambda: st.session_state.update({add_att_needs_key: st.session_state["chk_add_att_needs"]})
-            )
-
-            is_booked = False
-            if needs_booking:
-                is_booked = st.checkbox(
-                    "✅ Already Booked / Reserved?", 
-                    value=st.session_state[add_att_booked_key],
-                    key="chk_add_att_booked",
-                    on_change=lambda: st.session_state.update({add_att_booked_key: st.session_state["chk_add_att_booked"]})
+                needs_booking = st.checkbox(
+                    "🎟️ Needs to be booked in advance?", 
+                    value=st.session_state[add_att_needs_key],
+                    key="chk_add_att_needs",
+                    on_change=lambda: st.session_state.update({add_att_needs_key: st.session_state["chk_add_att_needs"]})
                 )
 
-            new_name = st.text_input("Description", key="add_att_name")
-            
-            c_time, c_dur = st.columns(2)
-            start_time = c_time.time_input("Start Time (Required)", value=None, key="add_att_time")
-            duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=1.0, step=0.25, key="add_att_dur")
-            
-            new_coords_str = st.text_input("📍 Location", key="add_att_coords")
-            
-            att_budget = 0.0
-            if (needs_booking and is_booked):
-                att_budget = st.number_input("💰 Budget (₪)", min_value=0.0, value=0.0, step=50.0, key="add_att_budget")
-            
-            new_notes = st.text_area("📝 Notes", key="add_att_notes")
-            
-            st.write("")
-            if st.button("Add Attraction", use_container_width=True, type="primary", key="add_att_submit"):
-                if not new_name.strip():
-                    st.error("Please enter a description.")
-                elif start_time is None:
-                    st.error("Please select a start time.")
-                else:
-                    new_item = {
-                        "name": new_name.strip(),
-                        "time": str(start_time),
-                        "duration": duration_hours,
-                        "coords": new_coords_str.strip(), 
-                        "budget": att_budget if (not needs_booking or (needs_booking and is_booked)) else 0.0,
-                        "needs_booking": needs_booking,
-                        "booked": is_booked if needs_booking else False,
-                        "notes": new_notes.strip(),
-                        "type": "attraction"
-                    }
-                    
-                    day_str = str(day_key)
-                    if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                    if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
-                    if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
-                    
-                    v_meta["days_metadata"][day_str]["schedule"].append(new_item)
-                    save_vacation_meta(v_meta)
-                    
-                    if add_att_needs_key in st.session_state: del st.session_state[add_att_needs_key]
-                    if add_att_booked_key in st.session_state: del st.session_state[add_att_booked_key]
-                    
-                    st.success("Attraction added successfully!")
-                    st.rerun()
+                is_booked = False
+                if needs_booking:
+                    is_booked = st.checkbox(
+                        "✅ Already Booked / Reserved?", 
+                        value=st.session_state[add_att_booked_key],
+                        key="chk_add_att_booked",
+                        on_change=lambda: st.session_state.update({add_att_booked_key: st.session_state["chk_add_att_booked"]})
+                    )
+
+                new_name = st.text_input("Description", key="add_att_name")
+                
+                start_time = st.time_input("Start Time (Required)", value=None, key="add_att_time")
+
+                col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
+                
+                with col_lbl:
+                    st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
+                current_val = float(item.get('duration', 1.0)) if 'item' in locals() and item else 1.0
+                def_hrs = int(current_val)
+                def_mins = int(round((current_val - def_hrs) * 60))
+                
+                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
+                dur_mins = col_min.selectbox("minutes", options=[0, 15, 30, 45], index=[0, 15, 30, 45].index(def_mins) if def_mins in [0, 15, 30, 45] else 0, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+                
+                duration_hours = dur_hours + (dur_mins / 60.0)
+                
+                new_coords_str = st.text_input("📍 Location", key="add_att_coords")
+                
+                att_budget = 0.0
+                if (needs_booking and is_booked):
+                    att_budget = st.number_input("💰 Budget (₪)", min_value=0.0, value=0.0, step=50.0, key="add_att_budget")
+                
+                new_notes = st.text_area("📝 Notes", key="add_att_notes")
+                
+                st.write("")
+                if st.button("Add Attraction", use_container_width=True, type="primary", key="add_att_submit"):
+                    if not new_name.strip():
+                        st.error("Please enter a description.")
+                    elif start_time is None:
+                        st.error("Please select a start time.")
+                    else:
+                        new_item = {
+                            "name": new_name.strip(),
+                            "time": str(start_time),
+                            "duration": duration_hours,
+                            "coords": new_coords_str.strip(), 
+                            "budget": att_budget if (not needs_booking or (needs_booking and is_booked)) else 0.0,
+                            "needs_booking": needs_booking,
+                            "booked": is_booked if needs_booking else False,
+                            "notes": new_notes.strip(),
+                            "type": "attraction"
+                        }
+                        
+                        day_str = str(day_key)
+                        if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                        if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+                        
+                        v_meta["days_metadata"][day_str]["schedule"].append(new_item)
+                        save_vacation_meta(v_meta)
+                        
+                        if add_att_needs_key in st.session_state: del st.session_state[add_att_needs_key]
+                        if add_att_booked_key in st.session_state: del st.session_state[add_att_booked_key]
+                        
+                        st.success("Attraction added successfully!")
+                        st.rerun()
 
         # אופציה 2: הוספת נסיעה 
         elif add_choice == "Transit between locations":
-            st.markdown("##### 🚗 Transit Details")
-            
-            add_needs_key = "add_transit_needs_booking"
-            add_booked_key = "add_transit_is_booked"
-            
-            if add_needs_key not in st.session_state:
-                st.session_state[add_needs_key] = False
-            if add_booked_key not in st.session_state:
-                st.session_state[add_booked_key] = False
+            with st.container(border=True):
+                st.markdown("##### 🚗 Transit Details")
+                
+                add_needs_key = "add_transit_needs_booking"
+                add_booked_key = "add_transit_is_booked"
+                
+                if add_needs_key not in st.session_state:
+                    st.session_state[add_needs_key] = False
+                if add_booked_key not in st.session_state:
+                    st.session_state[add_booked_key] = False
 
-            needs_booking = st.checkbox(
-                "🎟️ Needs to be booked in advance?", 
-                value=st.session_state[add_needs_key],
-                key="chk_add_needs_booking",
-                on_change=lambda: st.session_state.update({add_needs_key: st.session_state["chk_add_needs_booking"]})
-            )
-
-            is_booked = False
-            if needs_booking:
-                is_booked = st.checkbox(
-                    "✅ Already Booked / Reserved?", 
-                    value=st.session_state[add_booked_key],
-                    key="chk_add_is_booked",
-                    on_change=lambda: st.session_state.update({add_booked_key: st.session_state["chk_add_is_booked"]})
+                needs_booking = st.checkbox(
+                    "🎟️ Needs to be booked in advance?", 
+                    value=st.session_state[add_needs_key],
+                    key="chk_add_needs_booking",
+                    on_change=lambda: st.session_state.update({add_needs_key: st.session_state["chk_add_needs_booking"]})
                 )
 
-            transit_date = st.date_input("Transit Date", value=current_nav_date, format="DD/MM/YYYY", key="add_t_date")
-            
-            c_time, c_dur = st.columns(2)
-            transit_time = c_time.time_input("Departure Time", value=None, key="add_t_time")
-            transit_duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=1.0, step=0.25, key="add_t_dur")
-            
-            st.divider()
-            
-            col_o1, col_o2 = st.columns(2)
-            origin_desc = col_o1.text_input("Origin Description", key="add_t_odesc")
-            origin_loc = col_o2.text_input("Origin Location", key="add_t_oloc")
+                is_booked = False
+                if needs_booking:
+                    is_booked = st.checkbox(
+                        "✅ Already Booked / Reserved?", 
+                        value=st.session_state[add_booked_key],
+                        key="chk_add_is_booked",
+                        on_change=lambda: st.session_state.update({add_booked_key: st.session_state["chk_add_is_booked"]})
+                    )
+
+                transit_date = st.date_input("Transit Date", value=current_nav_date, format="DD/MM/YYYY", key="add_t_date")
                 
-            col_d1, col_d2 = st.columns(2)
-            dest_desc = col_d1.text_input("Destination Description", key="add_t_ddesc")
-            dest_loc = col_d2.text_input("Destination Location", key="add_t_dloc")
-            
-            st.divider()
-            
-            transit_cost = 0.0
-            if needs_booking and is_booked:
-                transit_cost = st.number_input("💰 Transit Cost (₪)", min_value=0.0, value=0.0, step=10.0, key="add_t_cost")
-            
-            transit_notes = st.text_area("📝 Notes", key="add_t_notes")
-            
-            st.write("")
-            if st.button("Add Transit", use_container_width=True, type="primary", key="add_t_submit"):
-                if not origin_desc.strip() or not dest_desc.strip():
-                    st.error("Please enter both origin and destination descriptions.")
-                elif transit_time is None:
-                    st.error("Please select a departure time.")
-                else:
-                    transit_name = f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}"
+                transit_time = st.time_input("Departure Time", value=None, key="add_t_time")
+                col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
+                            
+                with col_lbl:
+                    st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
+                current_val = float(item.get('duration', 1.0)) if 'item' in locals() and item else 1.0
+                def_hrs = int(current_val)
+                def_mins = int(round((current_val - def_hrs) * 60))
+                
+                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
+                dur_mins = col_min.selectbox("minutes", options=[0, 15, 30, 45], index=[0, 15, 30, 45].index(def_mins) if def_mins in [0, 15, 30, 45] else 0, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+                
+                duration_hours = dur_hours + (dur_mins / 60.0)
+                
+                st.divider()
+                
+                col_o1, col_o2 = st.columns(2)
+                origin_desc = col_o1.text_input("Origin Description", key="add_t_odesc")
+                origin_loc = col_o2.text_input("Origin Location", key="add_t_oloc")
                     
-                    new_transit_item = {
-                        "name": transit_name,
-                        "date": str(transit_date),
-                        "time": str(transit_time),
-                        "duration": transit_duration_hours,
-                        "origin_desc": origin_desc.strip(),
-                        "origin_loc": origin_loc.strip(),
-                        "dest_desc": dest_desc.strip(),
-                        "dest_loc": dest_loc.strip(),
-                        "coords": dest_loc.strip() if dest_loc.strip() else dest_desc.strip(), 
-                        "budget": transit_cost if (needs_booking and is_booked) else 0.0,
-                        "needs_booking": needs_booking,
-                        "booked": is_booked if needs_booking else False,
-                        "notes": transit_notes.strip(),
-                        "type": "transit"
-                    }
-                    
-                    target_day_str = str(transit_date)
-                    if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                    if target_day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
-                    if "schedule" not in v_meta["days_metadata"][target_day_str]: v_meta["days_metadata"][target_day_str]["schedule"] = []
-                    
-                    v_meta["days_metadata"][target_day_str]["schedule"].append(new_transit_item)
-                    save_vacation_meta(v_meta)
-                    
-                    if add_needs_key in st.session_state: del st.session_state[add_needs_key]
-                    if add_booked_key in st.session_state: del st.session_state[add_booked_key]
-                    
-                    st.success("Transit added successfully!")
-                    st.rerun()
+                col_d1, col_d2 = st.columns(2)
+                dest_desc = col_d1.text_input("Destination Description", key="add_t_ddesc")
+                dest_loc = col_d2.text_input("Destination Location", key="add_t_dloc")
+                
+                st.divider()
+                
+                transit_cost = 0.0
+                if needs_booking and is_booked:
+                    transit_cost = st.number_input("💰 Transit Cost (₪)", min_value=0.0, value=0.0, step=10.0, key="add_t_cost")
+                
+                transit_notes = st.text_area("📝 Notes", key="add_t_notes")
+                
+                st.write("")
+                if st.button("Add Transit", use_container_width=True, type="primary", key="add_t_submit"):
+                    if not origin_desc.strip() or not dest_desc.strip():
+                        st.error("Please enter both origin and destination descriptions.")
+                    elif transit_time is None:
+                        st.error("Please select a departure time.")
+                    else:
+                        transit_name = f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}"
+                        
+                        new_transit_item = {
+                            "name": transit_name,
+                            "date": str(transit_date),
+                            "time": str(transit_time),
+                            "duration": duration_hours,
+                            "origin_desc": origin_desc.strip(),
+                            "origin_loc": origin_loc.strip(),
+                            "dest_desc": dest_desc.strip(),
+                            "dest_loc": dest_loc.strip(),
+                            "coords": dest_loc.strip() if dest_loc.strip() else dest_desc.strip(), 
+                            "budget": transit_cost if (needs_booking and is_booked) else 0.0,
+                            "needs_booking": needs_booking,
+                            "booked": is_booked if needs_booking else False,
+                            "notes": transit_notes.strip(),
+                            "type": "transit"
+                        }
+                        
+                        target_day_str = str(transit_date)
+                        if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                        if target_day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][target_day_str]: v_meta["days_metadata"][target_day_str]["schedule"] = []
+                        
+                        v_meta["days_metadata"][target_day_str]["schedule"].append(new_transit_item)
+                        save_vacation_meta(v_meta)
+                        
+                        if add_needs_key in st.session_state: del st.session_state[add_needs_key]
+                        if add_booked_key in st.session_state: del st.session_state[add_booked_key]
+                        
+                        st.success("Transit added successfully!")
+                        st.rerun()
 
         # אופציה 3: הוספת מסעדה
         elif add_choice == "Restaurant":
@@ -2592,9 +2597,20 @@ elif st.session_state.get('authentication_status') == True:
                 st.markdown("##### Restaurant Details")
                 rest_name = st.text_input("Restaurant Name")
                 
-                c_time, c_dur = st.columns(2)
-                rest_time = c_time.time_input("Start Time (Required)", value=None)
-                rest_duration = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=12.0, value=1.5, step=0.25)
+                rest_time = st.time_input("Start Time (Required)", value=None)
+
+                col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
+                            
+                with col_lbl:
+                    st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
+                current_val = float(item.get('duration', 1.0)) if 'item' in locals() and item else 1.0
+                def_hrs = int(current_val)
+                def_mins = int(round((current_val - def_hrs) * 60))
+                
+                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
+                dur_mins = col_min.selectbox("minutes", options=[0, 15, 30, 45], index=[0, 15, 30, 45].index(def_mins) if def_mins in [0, 15, 30, 45] else 0, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+                
+                duration_hours = dur_hours + (dur_mins / 60.0)
                 
                 rest_coords = st.text_input("📍 Address")
                 is_booked = st.checkbox("✅ Table Booked / Reserved?", value=False)
@@ -2609,7 +2625,7 @@ elif st.session_state.get('authentication_status') == True:
                         new_rest_item = {
                             "name": rest_name.strip(),
                             "time": str(rest_time),
-                            "duration": rest_duration,
+                            "duration": duration_hours,
                             "coords": rest_coords.strip(),
                             "booked": is_booked,
                             "budget": 0.0,  
@@ -2664,136 +2680,149 @@ elif st.session_state.get('authentication_status') == True:
 
     @st.dialog("✏️ Edit Transit")
     def edit_transit_dialog(v_meta, day_key, idx, item):
-        st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
-        day_str = str(day_key)
-        
-        state_key_needs = f"edit_needs_bk_{day_str}_{idx}"
-        state_key_booked = f"edit_is_bk_{day_str}_{idx}"
-        
-        if state_key_needs not in st.session_state:
-            st.session_state[state_key_needs] = item.get('needs_booking', False)
-        if state_key_booked not in st.session_state:
-            st.session_state[state_key_booked] = item.get('booked', False)
+        with st.container(border=True):
+            st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
+            day_str = str(day_key)
+            
+            state_key_needs = f"edit_needs_bk_{day_str}_{idx}"
+            state_key_booked = f"edit_is_bk_{day_str}_{idx}"
+            
+            if state_key_needs not in st.session_state:
+                st.session_state[state_key_needs] = item.get('needs_booking', False)
+            if state_key_booked not in st.session_state:
+                st.session_state[state_key_booked] = item.get('booked', False)
 
-        needs_booking = st.checkbox(
-            "🎟️ Needs to be booked in advance?", 
-            value=st.session_state[state_key_needs],
-            key=f"chk_needs_{day_str}_{idx}",
-            on_change=lambda: st.session_state.update({state_key_needs: st.session_state[f"chk_needs_{day_str}_{idx}"]})
-        )
-
-        is_booked = False
-        if needs_booking:
-            is_booked = st.checkbox(
-                "✅ Already Booked / Reserved?", 
-                value=st.session_state[state_key_booked],
-                key=f"chk_booked_{day_str}_{idx}",
-                on_change=lambda: st.session_state.update({state_key_booked: st.session_state[f"chk_booked_{day_str}_{idx}"]})
+            needs_booking = st.checkbox(
+                "🎟️ Needs to be booked in advance?", 
+                value=st.session_state[state_key_needs],
+                key=f"chk_needs_{day_str}_{idx}",
+                on_change=lambda: st.session_state.update({state_key_needs: st.session_state[f"chk_needs_{day_str}_{idx}"]})
             )
 
-        st.markdown("##### Edit Transit Details")
-        
-        try:
-            def_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
-        except:
-            def_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+            is_booked = False
+            if needs_booking:
+                is_booked = st.checkbox(
+                    "✅ Already Booked / Reserved?", 
+                    value=st.session_state[state_key_booked],
+                    key=f"chk_booked_{day_str}_{idx}",
+                    on_change=lambda: st.session_state.update({state_key_booked: st.session_state[f"chk_booked_{day_str}_{idx}"]})
+                )
+
+            st.markdown("##### Edit Transit Details")
             
-        transit_date = st.date_input("Transit Date", value=def_date, format="DD/MM/YYYY", key=f"t_date_{day_str}_{idx}")
-        
-        c_time, c_dur = st.columns(2)
-        try:
-            def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
-        except:
-            def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
+            try:
+                def_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
+            except:
+                def_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+                
+            transit_date = st.date_input("Transit Date", value=def_date, format="DD/MM/YYYY", key=f"t_date_{day_str}_{idx}")
             
-        transit_time = c_time.time_input("Departure Time", value=def_time, key=f"t_time_{day_str}_{idx}")
-        transit_duration_hours = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=100.0, value=float(item.get('duration', 1.0)), step=0.25, key=f"t_dur_{day_str}_{idx}")
-        
-        st.divider()
-        
-        col_o1, col_o2 = st.columns(2)
-        origin_desc = col_o1.text_input("Origin Description", value=item.get('origin_desc', ''), key=f"t_odesc_{day_str}_{idx}")
-        origin_loc = col_o2.text_input("Origin Location", value=item.get('origin_loc', ''), key=f"t_oloc_{day_str}_{idx}")
+            try:
+                def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
+            except:
+                def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
+                
+            transit_time = st.time_input("Departure Time", value=def_time, key=f"t_time_{day_str}_{idx}")
             
-        col_d1, col_d2 = st.columns(2)
-        dest_desc = col_d1.text_input("Destination Description", value=item.get('dest_desc', ''), key=f"t_ddesc_{day_str}_{idx}")
-        dest_loc = col_d2.text_input("Destination Location", value=item.get('dest_loc', ''), key=f"t_dloc_{day_str}_{idx}")
-        
-        st.divider()
-        
-        transit_cost = float(item.get('budget', 0.0))
-        if needs_booking and is_booked:
-            transit_cost = st.number_input("💰 Transit Cost (₪)", min_value=0.0, value=transit_cost, step=10.0, key=f"t_cost_{day_str}_{idx}")
-        else:
-            transit_cost = 0.0
-        
-        transit_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"t_notes_{day_str}_{idx}")
-        
-        st.write("")
-        col_save, col_del = st.columns(2)
-        
-        with col_save:
-            save_clicked = st.button("Save Changes", use_container_width=True, type="primary", key=f"t_save_{day_str}_{idx}")
-        with col_del:
-            delete_clicked = st.button("Delete", use_container_width=True, key=f"t_del_{day_str}_{idx}")
-        
-        if save_clicked:
-            if not origin_desc.strip() or not dest_desc.strip():
-                st.error("Please enter both origin and destination descriptions.")
-            elif transit_time is None:
-                st.error("Please select a departure time.")
+            curr_dur_val = float(item.get('duration', 1.0))
+            def_hrs = int(curr_dur_val)
+            def_mins = int(round((curr_dur_val - def_hrs) * 60))
+            valid_mins = [0, 15, 30, 45]
+            min_idx = valid_mins.index(def_mins) if def_mins in valid_mins else 0
+
+            col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
+            with col_lbl:
+                st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400; text-align: center;'>Duration:</div>", unsafe_allow_html=True)
+                
+            dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"t_hrs_{day_str}_{idx}")
+            dur_mins = col_min.selectbox("minutes", options=valid_mins, index=min_idx, key=f"t_mins_{day_str}_{idx}")
+            transit_duration_hours = dur_hours + (dur_mins / 60.0)
+            
+            st.divider()
+            
+            col_o1, col_o2 = st.columns(2)
+            origin_desc = col_o1.text_input("Origin Description", value=item.get('origin_desc', ''), key=f"t_odesc_{day_str}_{idx}")
+            origin_loc = col_o2.text_input("Origin Location", value=item.get('origin_loc', ''), key=f"t_oloc_{day_str}_{idx}")
+                
+            col_d1, col_d2 = st.columns(2)
+            dest_desc = col_d1.text_input("Destination Description", value=item.get('dest_desc', ''), key=f"t_ddesc_{day_str}_{idx}")
+            dest_loc = col_d2.text_input("Destination Location", value=item.get('dest_loc', ''), key=f"t_dloc_{day_str}_{idx}")
+            
+            st.divider()
+            
+            transit_cost = float(item.get('budget', 0.0))
+            if needs_booking and is_booked:
+                transit_cost = st.number_input("💰 Transit Cost (₪)", min_value=0.0, value=transit_cost, step=10.0, key=f"t_cost_{day_str}_{idx}")
             else:
-                target_day_str = str(transit_date)
-                
-                updated_transit_item = {
-                    "name": f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}",
-                    "date": target_day_str,
-                    "time": str(transit_time),
-                    "duration": transit_duration_hours,
-                    "origin_desc": origin_desc.strip(),
-                    "origin_loc": origin_loc.strip(),
-                    "dest_desc": dest_desc.strip(),
-                    "dest_loc": dest_loc.strip(),
-                    "coords": dest_loc.strip() if dest_loc.strip() else dest_desc.strip(), 
-                    "budget": transit_cost if (needs_booking and is_booked) else 0.0,
-                    "needs_booking": needs_booking,
-                    "booked": is_booked if needs_booking else False,
-                    "notes": transit_notes,
-                    "type": "transit"
-                }
-                
-                if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
-                    if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
-                        v_meta["days_metadata"][day_str]["schedule"].pop(idx)
-                
-                if target_day_str not in v_meta["days_metadata"]: 
-                    v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
-                if "schedule" not in v_meta["days_metadata"][target_day_str]: 
-                    v_meta["days_metadata"][target_day_str]["schedule"] = []
-                        
-                v_meta["days_metadata"][target_day_str]["schedule"].append(updated_transit_item)
-                
-                save_vacation_meta(v_meta)
-                
-                if state_key_needs in st.session_state: del st.session_state[state_key_needs]
-                if state_key_booked in st.session_state: del st.session_state[state_key_booked]
-                
-                st.success("Transit updated successfully!")
-                st.rerun()
-                
-        if delete_clicked:
-            if day_str in v_meta.get("days_metadata", {}):
-                if "schedule" in v_meta["days_metadata"][day_str]:
-                    v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                transit_cost = 0.0
+            
+            transit_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"t_notes_{day_str}_{idx}")
+            
+            st.write("")
+            col_save, col_del = st.columns(2)
+            
+            with col_save:
+                save_clicked = st.button("Save Changes", use_container_width=True, type="primary", key=f"t_save_{day_str}_{idx}")
+            with col_del:
+                delete_clicked = st.button("Delete", use_container_width=True, key=f"t_del_{day_str}_{idx}")
+            
+            if save_clicked:
+                if not origin_desc.strip() or not dest_desc.strip():
+                    st.error("Please enter both origin and destination descriptions.")
+                elif transit_time is None:
+                    st.error("Please select a departure time.")
+                else:
+                    target_day_str = str(transit_date)
+                    
+                    updated_transit_item = {
+                        "name": f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}",
+                        "date": target_day_str,
+                        "time": str(transit_time),
+                        "duration": transit_duration_hours,
+                        "origin_desc": origin_desc.strip(),
+                        "origin_loc": origin_loc.strip(),
+                        "dest_desc": dest_desc.strip(),
+                        "dest_loc": dest_loc.strip(),
+                        "coords": dest_loc.strip() if dest_loc.strip() else dest_desc.strip(), 
+                        "budget": transit_cost if (needs_booking and is_booked) else 0.0,
+                        "needs_booking": needs_booking,
+                        "booked": is_booked if needs_booking else False,
+                        "notes": transit_notes,
+                        "type": "transit"
+                    }
+                    
+                    if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                    if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
+                        if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
+                            v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                    
+                    if target_day_str not in v_meta["days_metadata"]: 
+                        v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][target_day_str]: 
+                        v_meta["days_metadata"][target_day_str]["schedule"] = []
+                            
+                    v_meta["days_metadata"][target_day_str]["schedule"].append(updated_transit_item)
+                    
                     save_vacation_meta(v_meta)
                     
                     if state_key_needs in st.session_state: del st.session_state[state_key_needs]
                     if state_key_booked in st.session_state: del st.session_state[state_key_booked]
                     
-                    st.success("Deleted successfully!")
+                    st.success("Transit updated successfully!")
                     st.rerun()
-
+                    
+            if delete_clicked:
+                if day_str in v_meta.get("days_metadata", {}):
+                    if "schedule" in v_meta["days_metadata"][day_str]:
+                        v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                        save_vacation_meta(v_meta)
+                        
+                        if state_key_needs in st.session_state: del st.session_state[state_key_needs]
+                        if state_key_booked in st.session_state: del st.session_state[state_key_booked]
+                        
+                        st.success("Deleted successfully!")
+                        st.rerun()
+    
     @st.dialog("✏️ Edit Restaurant")
     def edit_restaurant_dialog(v_meta, day_key, idx, item):
         day_str = str(day_key)
@@ -2848,7 +2877,6 @@ elif st.session_state.get('authentication_status') == True:
                         st.success("Deleted successfully!")
                         st.rerun()
 
-    
     # ----------------------------------------------------
     # סרגל צד - בחירת וניהול פרויקטים
     # ----------------------------------------------------
@@ -3167,7 +3195,6 @@ elif st.session_state.get('authentication_status') == True:
                                 )
                             ]
 
-                            import re
                             def get_sorting_key(title):
                                 month_key = f"{selected_month}_{selected_year}"
                                 display_title = title["overrides"].get(month_key, {}).get("title", title["title"]) if "overrides" in title else title["title"]
@@ -3278,7 +3305,6 @@ elif st.session_state.get('authentication_status') == True:
                 )
             ]
 
-            import re
             def get_income_sorting_key(item):
                 month_key = f"{selected_month}_{selected_year}"
                 display_title = item["overrides"].get(month_key, {}).get("title", item["title"]) if "overrides" in item else item["title"]
@@ -3435,6 +3461,7 @@ elif st.session_state.get('authentication_status') == True:
         # ------------------------------------------------
         # מודול 2: תכנון חופשה
         # ------------------------------------------------
+
         elif current_project["type"] == "Vacation Planner":
             vacation_folder = f"{project_folder}"
             os.makedirs(vacation_folder, exist_ok=True)
@@ -3831,13 +3858,13 @@ elif st.session_state.get('authentication_status') == True:
                                         orig_loc = item.get('origin_loc', '')
                                         dest_desc = item.get('dest_desc', 'Destination')
                                         dest_loc = item.get('dest_loc', '')
-                                        dur = item.get('duration', 1.0)
+                                        dur_formatted = format_duration(item.get('duration', 1.0))
                                         
                                         st.markdown(f"""
                                             <div style='text-align: center; margin-bottom: 17px;'>
                                                 <div style='font-size: 1.0rem; font-weight: 700;'>{orig_desc}</div>
                                                 <div style='font-size: 0.75rem; opacity: 0.7;'>{orig_loc}</div>
-                                                <div class="attr-duration" style='text-align: center; color: #c62828; margin: 4px auto; display: inline-block;'>Duration:<br><b>{dur} hrs</b></div>
+                                                <div class="attr-duration" style='text-align: center; color: #c62828; margin: 4px auto; display: inline-block;'>Duration:<br><b>{dur_formatted}</b></div>
                                                 <div style='font-size: 1.0rem; font-weight: 700;'>{dest_desc}</div>
                                                 <div style='font-size: 0.75rem; opacity: 0.7;'>{dest_loc}</div>
                                             </div>
@@ -3872,7 +3899,7 @@ elif st.session_state.get('authentication_status') == True:
                                 elif item_type == 'restaurant':
                                     c_time, c_info, c_booked, c_map, c_edit = st.columns([0.15, 0.55, 0.2, 0.05, 0.05], vertical_alignment="center")
                                     start_time_str = item['time'][:5]
-                                    duration_val = item.get('duration', 1.5)
+                                    dur_formatted = format_duration(item.get('duration', 1.0))
                                     rest_name = item.get('name', 'Restaurant')
                                     rest_notes = item.get('notes', '')
                                     is_booked = item.get('booked', False)
@@ -3883,7 +3910,7 @@ elif st.session_state.get('authentication_status') == True:
                                             <div style='text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;'>
                                                 <span style='font-size: 1.25rem; font-weight: 800; display: block; text-align: center; margin-bottom: -10px;'>{start_time_str}</span>
                                                 <div style='display: flex; justify-content: center; width: 100%; margin-bottom: 10px;'>
-                                                    <div class="attr-duration" style='text-align: center; font-size: 0.6rem; display: inline-block; transform: translateX(-3px);'>Duration:<br><b>{duration_val} hrs</b></div>
+                                                    <div class="attr-duration" style='text-align: center; font-size: 0.6rem; display: inline-block; transform: translateX(-3px);'>Duration:<br><b>{dur_formatted}</b></div>
                                                 </div>
                                             </div>
                                         """, unsafe_allow_html=True)
@@ -3922,11 +3949,12 @@ elif st.session_state.get('authentication_status') == True:
                                     c_time, c_info, c_cost, c_map, c_edit = st.columns([0.15, 0.55, 0.2, 0.05, 0.05], vertical_alignment="center")
                                     
                                     with c_time:
+                                        dur_formatted = format_duration(item.get('duration', 1.0))
                                         st.markdown(f"""
                                             <div style='text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;'>
                                                 <span style='font-size: 1.25rem; font-weight: 800; display: block; text-align: center; margin-bottom: -10px;'>{item['time'][:5]}</span>
                                                 <div style='display: flex; justify-content: center; width: 100%; margin-bottom: 10px;'>
-                                                    <div class="attr-duration" style='text-align: center; font-size: 0.6rem; display: inline-block; transform: translateX(-3px);'>Duration:<br><b>{item.get('duration', 0)} hrs</b></div>
+                                                    <div class="attr-duration" style='text-align: center; font-size: 0.6rem; display: inline-block; transform: translateX(-3px);'>Duration:<br><b>{dur_formatted}</b></div>
                                                 </div>
                                             </div>
                                         """, unsafe_allow_html=True)
@@ -4184,6 +4212,7 @@ elif st.session_state.get('authentication_status') == True:
 
                 if st.button("➕ Add", key="fab_attraction", help="Add attraction, transit, or expense"):
                     unified_trip_add_dialog(vac_meta, current_nav_date, project_folder)
+
         # ------------------------------------------------
         # מודול שכר שעה 
         # ------------------------------------------------
