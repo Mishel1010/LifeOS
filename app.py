@@ -681,9 +681,6 @@ st.markdown("""
         border-color: #1976d2;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    [data-testid="stToolbar"] {
-        display: none !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
