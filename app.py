@@ -4492,7 +4492,7 @@ elif st.session_state.get('authentication_status') == True:
                                 </style>
                             """, unsafe_allow_html=True)
 
-                            btn_text = "🚗 Open Today's Full Route in Google Maps" if len(attraction_locations) > 1 else "📍 View Location in Google Maps"
+                            btn_text = "Open Today's Full Route in Google Maps" if len(attraction_locations) > 1 else "📍 View Location in Google Maps"
                             st.link_button(btn_text, gmaps_route_link, use_container_width=True)
 
                 if st.button("➕ Add", key="fab_attraction", help="Add attraction, transit, or expense"):
