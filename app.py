@@ -681,10 +681,9 @@ st.markdown("""
         border-color: #1976d2;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    /* מעלים את סרגל הכלים העליון ואת אייקון הגיטהאב/פארק */
-    header {visibility: hidden !important;}
-    #MainMenu {visibility: hidden !important;}
-    .viewerBadge_container__1QSob {display: none !important;}
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
