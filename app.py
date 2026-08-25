@@ -681,6 +681,21 @@ st.markdown("""
         border-color: #1976d2;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
+    /* התאמה למסכי טלפון נייד */
+    @media (max-width: 768px) {
+        /* הפיכת עמודות לטור אנכי בטלפון כדי שלא יידחסו */
+        [data-testid="column"] {
+            width: 100% !important;
+            flex: 100% !important;
+            min-width: 100% !important;
+        }
+        /* הקטנת מרווחים חיצוניים שגוזלים מקום יקר במסך קטן */
+        .block-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 2rem;
+        }
+    }
     </style>
 """, unsafe_allow_html=True)
 
