@@ -873,6 +873,33 @@ hour_options = [f"{i:02d}" for i in range(24)]
 #------------------------------------------------------
 # אתחול מערכת ההזדהות
 #------------------------------------------------------
+
+if not os.path.exists('config.yaml') and "cookie" in st.secrets:
+    config_dict = {
+        "cookie": {
+            "expiry_days": st.secrets["cookie"]["expiry_days"],
+            "key": st.secrets["cookie"]["key"],
+            "name": st.secrets["cookie"]["name"]
+        },
+        "credentials": {
+            "usernames": {}
+        },
+        "pre-authorized": {
+            "demolist": list(st.secrets.get("pre-authorized", {}).get("demolist", []))
+        }
+    }
+    
+    if "credentials" in st.secrets and "usernames" in st.secrets["credentials"]:
+        for username, u_data in st.secrets["credentials"]["usernames"].items():
+            config_dict["credentials"]["usernames"][username] = {
+                "email": u_data["email"],
+                "name": u_data["name"],
+                "password": u_data["password"]
+            }
+
+    with open('config.yaml', 'w', encoding='utf-8') as f:
+        yaml.dump(config_dict, f, allow_unicode=True)
+
 with open('config.yaml', encoding='utf-8') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
@@ -4492,7 +4519,7 @@ elif st.session_state.get('authentication_status') == True:
                                 </style>
                             """, unsafe_allow_html=True)
 
-                            btn_text = "Open Today's Full Route in Google Maps" if len(attraction_locations) > 1 else "📍 View Location in Google Maps"
+                            btn_text = "🚗 Open Today's Full Route in Google Maps" if len(attraction_locations) > 1 else "📍 View Location in Google Maps"
                             st.link_button(btn_text, gmaps_route_link, use_container_width=True)
 
                 if st.button("➕ Add", key="fab_attraction", help="Add attraction, transit, or expense"):
