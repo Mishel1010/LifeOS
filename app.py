@@ -13,7 +13,8 @@ from yaml.loader import SafeLoader
 import shutil
 from streamlit_authenticator.utilities.hasher import Hasher
 import re
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time
+
 
 st.markdown("""
     <style>
@@ -667,6 +668,19 @@ st.markdown("""
     .hover-scale:hover {
         transform: scale(1.25);
     }
+    .flight-card {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        transition: all 0.2s ease-in-out;
+        background-color: var(--secondary-background-color);
+    }
+    .flight-card:hover {
+        background-color: rgba(128, 128, 128, 0.1);
+        transform: scale(1.01);
+        border-color: #1976d2;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -852,6 +866,9 @@ def format_duration(hours_float):
             return f"{hours} hrs<br>{minutes:02d} mins"
     except:
         return "1 hour"
+
+minute_options = [f"{i:02d}" for i in range(60)]
+hour_options = [f"{i:02d}" for i in range(24)]
 
 #------------------------------------------------------
 # אתחול מערכת ההזדהות
@@ -1900,6 +1917,11 @@ elif st.session_state.get('authentication_status') == True:
             st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
             day_str = str(day_key)
             
+            try:
+                def_res_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
+            except:
+                def_res_date = current_nav_date
+
             state_key_needs = f"edit_att_needs_{day_str}_{idx}"
             state_key_booked = f"edit_att_booked_{day_str}_{idx}"
             
@@ -1925,27 +1947,47 @@ elif st.session_state.get('authentication_status') == True:
                 )
 
             new_name = st.text_input("Description", value=item.get('name', ''), key=f"att_name_{day_str}_{idx}")
+
+            try:
+                t_start = datetime.strptime(v_meta.get("start_date", str(date.today())), "%Y-%m-%d").date()
+                t_end = datetime.strptime(v_meta.get("end_date", str(date.today() + timedelta(days=7))), "%Y-%m-%d").date()
+            except:
+                t_start, t_end = date.today(), date.today() + timedelta(days=7)
             
             try:
                 def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
             except:
                 def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
 
-            start_time = st.time_input("Start Time", value=def_time, key=f"att_time_{day_str}_{idx}")
+            col_d, col_h, com_m = st.columns([1, 0.5, 0.5], vertical_alignment="center")
+            with col_d:
+                reservation_date = st.date_input("Date", value=def_res_date, format="DD/MM/YYYY", key=f"edit_att_date_{day_str}_{idx}")
+            with col_h:
+                curr_hr_str = f"{def_time.hour:02d}"
+                hr_idx = hour_options.index(curr_hr_str) if curr_hr_str in hour_options else 0
+                reservation_hour = st.selectbox("Hour", options=hour_options, index=hr_idx, key=f"edit_att_hr_{day_str}_{idx}")
+            with com_m:
+                curr_min_str = f"{def_time.minute:02d}"
+                min_idx = minute_options.index(curr_min_str) if curr_min_str in minute_options else 0
+                reservation_minute = st.selectbox("Minute", options=minute_options, index=min_idx, key=f"edit_att_min_{day_str}_{idx}")
+
+            start_time = time(int(reservation_hour), int(reservation_minute))
             
             curr_dur_val = float(item.get('duration', 2.0))
             def_hrs = int(curr_dur_val)
             def_mins = int(round((curr_dur_val - def_hrs) * 60))
-            valid_mins = [0, 15, 30, 45]
-            min_idx = valid_mins.index(def_mins) if def_mins in valid_mins else 0
 
             col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
             with col_lbl:
-                    st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
+                st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
                 
             dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"att_hrs_{day_str}_{idx}")
-            dur_mins = col_min.selectbox("minutes", options=valid_mins, index=min_idx, key=f"att_mins_{day_str}_{idx}")
-            duration_hours = dur_hours + (dur_mins / 60.0)
+            
+            def_mins_str = f"{def_mins:02d}" if def_mins in range(60) else "00"
+            dur_min_idx = minute_options.index(def_mins_str) if def_mins_str in minute_options else 0
+            dur_mins = col_min.selectbox("minutes", options=minute_options, index=dur_min_idx, key=f"att_mins_{day_str}_{idx}")
+            
+            duration_hours = int(dur_hours) + (int(dur_mins) / 60.0)
             
             new_coords_str = st.text_input("📍 Location", value=item.get('coords', ''), key=f"att_coords_{day_str}_{idx}")
             
@@ -1968,11 +2010,13 @@ elif st.session_state.get('authentication_status') == True:
             if save_clicked:
                 if not new_name.strip():
                     st.error("Please enter a description.")
-                elif start_time is None:
-                    st.error("Please select a start time.")
+                elif not (t_start <= reservation_date <= t_end):
+                    st.error(f"❌ Error: Date must be within trip bounds ({t_start.strftime('%d/%m/%Y')} - {t_end.strftime('%d/%m/%Y')})")
                 else:
+                    target_day_str = str(reservation_date)
                     updated_item = {
                         "name": new_name.strip(),
+                        "date": target_day_str,
                         "time": str(start_time),
                         "duration": duration_hours,
                         "coords": new_coords_str.strip(),
@@ -1984,10 +2028,23 @@ elif st.session_state.get('authentication_status') == True:
                     }
 
                     if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                    if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
-                    if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
 
-                    v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
+                    if target_day_str != day_str:
+                        if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
+                            if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
+                                v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                        
+                        if target_day_str not in v_meta["days_metadata"]: 
+                            v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][target_day_str]: 
+                            v_meta["days_metadata"][target_day_str]["schedule"] = []
+                            
+                        v_meta["days_metadata"][target_day_str]["schedule"].append(updated_item)
+                    else:
+                        if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+                        v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
+
                     save_vacation_meta(v_meta)
                     
                     if state_key_needs in st.session_state: del st.session_state[state_key_needs]
@@ -2127,6 +2184,10 @@ elif st.session_state.get('authentication_status') == True:
             st.session_state["open_dialog"] = "expenses"
             st.rerun()
 
+        if st.button("Manage Flights", use_container_width=True):
+            st.session_state["open_dialog"] = "flights"
+            st.rerun()
+
         if st.button("⚙️ Edit Trip Settings", use_container_width=True, type="primary"):
             st.session_state["open_dialog"] = "edit_settings"
             st.rerun()
@@ -2165,11 +2226,16 @@ elif st.session_state.get('authentication_status') == True:
             "Transportation": 0.0,
             "Accommodation": 0.0,
             "Shopping": 0.0,
+            "Flights": 0.0,
             "Other": 0.0
         }
         
         hotels_expenses = sum(float(h.get("price", 0.0)) for h in vac_meta.get("hotels", []))
         category_expenses["Accommodation"] += hotels_expenses
+
+        flights_list = vac_meta.get("flights", [])
+        flights_expenses = sum(float(f.get("price", 0.0)) for f in flights_list)
+        category_expenses["Flights"] += flights_expenses
         
         for d_key, d_val in vac_meta.get("days_metadata", {}).items():
             for item in d_val.get("schedule", []):
@@ -2390,6 +2456,12 @@ elif st.session_state.get('authentication_status') == True:
 
     @st.dialog("➕ Add to Itinerary / Expenses")
     def unified_trip_add_dialog(v_meta, day_key, project_folder):
+        try:
+            t_start = datetime.strptime(v_meta.get("start_date", str(date.today())), "%Y-%m-%d").date()
+            t_end = datetime.strptime(v_meta.get("end_date", str(date.today() + timedelta(days=7))), "%Y-%m-%d").date()
+        except:
+            t_start, t_end = date.today(), date.today() + timedelta(days=7)
+
         if "add_modal_choice" not in st.session_state:
             st.session_state.add_modal_choice = None
 
@@ -2432,20 +2504,24 @@ elif st.session_state.get('authentication_status') == True:
 
                 new_name = st.text_input("Description", key="add_att_name")
                 
-                start_time = st.time_input("Start Time (Required)", value=None, key="add_att_time")
+                col_d, col_h, col_m = st.columns([1, 0.5, 0.5], vertical_alignment="center")
+                with col_d:
+                    att_date = st.date_input("Date", value=current_nav_date, format="DD/MM/YYYY", key="add_att_date")
+                with col_h:
+                    att_hour = st.selectbox("Hour", options=hour_options, index=10, key="add_att_hour")
+                with col_m:
+                    att_minute = st.selectbox("Minute", options=minute_options, index=0, key="add_att_min")
+                
+                start_time = time(int(att_hour), int(att_minute))
 
                 col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
-                
                 with col_lbl:
                     st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
-                current_val = float(item.get('duration', 1.0)) if 'item' in locals() and item else 1.0
-                def_hrs = int(current_val)
-                def_mins = int(round((current_val - def_hrs) * 60))
                 
-                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
-                dur_mins = col_min.selectbox("minutes", options=[0, 15, 30, 45], index=[0, 15, 30, 45].index(def_mins) if def_mins in [0, 15, 30, 45] else 0, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=2, step=1, key="add_att_dur_hrs")
+                dur_mins = col_min.selectbox("minutes", options=minute_options, index=0, key="add_att_dur_mins")
                 
-                duration_hours = dur_hours + (dur_mins / 60.0)
+                duration_hours = int(dur_hours) + (int(dur_mins) / 60.0)
                 
                 new_coords_str = st.text_input("📍 Location", key="add_att_coords")
                 
@@ -2461,9 +2537,12 @@ elif st.session_state.get('authentication_status') == True:
                         st.error("Please enter a description.")
                     elif start_time is None:
                         st.error("Please select a start time.")
+                    elif not (t_start <= att_date <= t_end):
+                        st.error(f"Error: Date must be within trip bounds ({t_start.strftime('%d/%m/%Y')} - {t_end.strftime('%d/%m/%Y')})")
                     else:
                         new_item = {
                             "name": new_name.strip(),
+                            "date": str(att_date),
                             "time": str(start_time),
                             "duration": duration_hours,
                             "coords": new_coords_str.strip(), 
@@ -2517,21 +2596,24 @@ elif st.session_state.get('authentication_status') == True:
                         on_change=lambda: st.session_state.update({add_booked_key: st.session_state["chk_add_is_booked"]})
                     )
 
-                transit_date = st.date_input("Transit Date", value=current_nav_date, format="DD/MM/YYYY", key="add_t_date")
-                
-                transit_time = st.time_input("Departure Time", value=None, key="add_t_time")
+                col_d, col_h, com_m = st.columns([1, 0.5, 0.5], vertical_alignment="center")
+                with col_d:
+                    transit_date = st.date_input("Transit Date", value=current_nav_date, format="DD/MM/YYYY", key="add_t_date")
+                with col_h:
+                    transit_hour = st.selectbox("Hour", options=hour_options, index=10, key="add_t_hour")
+                with com_m:
+                    transit_minute = st.selectbox("Minute", options=minute_options, index=0, key="add_t_min")
+
+                transit_time = time(int(transit_hour), int(transit_minute))
+
                 col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
-                            
                 with col_lbl:
                     st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
-                current_val = float(item.get('duration', 1.0)) if 'item' in locals() and item else 1.0
-                def_hrs = int(current_val)
-                def_mins = int(round((current_val - def_hrs) * 60))
                 
-                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
-                dur_mins = col_min.selectbox("minutes", options=[0, 15, 30, 45], index=[0, 15, 30, 45].index(def_mins) if def_mins in [0, 15, 30, 45] else 0, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+                dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=1, step=1, key="add_t_dur_hrs")
+                dur_mins = col_min.selectbox("minutes", options=minute_options, index=0, key="add_t_dur_mins")
                 
-                duration_hours = dur_hours + (dur_mins / 60.0)
+                duration_hours = int(dur_hours) + (int(dur_mins) / 60.0)
                 
                 st.divider()
                 
@@ -2557,8 +2639,10 @@ elif st.session_state.get('authentication_status') == True:
                         st.error("Please enter both origin and destination descriptions.")
                     elif transit_time is None:
                         st.error("Please select a departure time.")
+                    elif not (t_start <= transit_date <= t_end):
+                        st.error(f"Error: Date must be within trip bounds ({t_start.strftime('%d/%m/%Y')} - {t_end.strftime('%d/%m/%Y')})")
                     else:
-                        transit_name = f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}"
+                        transit_name = f"{origin_desc.strip()} ➔ {dest_desc.strip()}"
                         
                         new_transit_item = {
                             "name": transit_name,
@@ -2597,7 +2681,18 @@ elif st.session_state.get('authentication_status') == True:
                 st.markdown("##### Restaurant Details")
                 rest_name = st.text_input("Restaurant Name")
                 
-                rest_time = st.time_input("Start Time (Required)", value=None)
+                col_d, col_h, col_m = st.columns([1, 0.5, 0.5], vertical_alignment="center")
+                
+                with col_d:
+                    reservation_date = st.date_input("Reservation Date", value=current_nav_date, format="DD/MM/YYYY", key="add_t_date")
+
+                with col_h:
+                    reservation_hour = st.selectbox("Hour", options=hour_options, index=10, key="add_t_hour")
+
+                with col_m:
+                    reservation_minute = st.selectbox("Minute", options=minute_options, index=0, key="add_t_minute")
+
+                rest_time = time(int(reservation_hour), int(reservation_minute))
 
                 col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
                             
@@ -2608,9 +2703,13 @@ elif st.session_state.get('authentication_status') == True:
                 def_mins = int(round((current_val - def_hrs) * 60))
                 
                 dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
-                dur_mins = col_min.selectbox("minutes", options=[0, 15, 30, 45], index=[0, 15, 30, 45].index(def_mins) if def_mins in [0, 15, 30, 45] else 0, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
                 
-                duration_hours = dur_hours + (dur_mins / 60.0)
+                def_mins_str = f"{def_mins:02d}" if def_mins in range(60) else "00"
+                min_index = minute_options.index(def_mins_str) if def_mins_str in minute_options else 0
+                
+                dur_mins = col_min.selectbox("minutes", options=minute_options, index=min_index, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+                
+                duration_hours = int(dur_hours) + (int(dur_mins) / 60.0)
                 
                 rest_coords = st.text_input("📍 Address")
                 is_booked = st.checkbox("✅ Table Booked / Reserved?", value=False)
@@ -2621,8 +2720,11 @@ elif st.session_state.get('authentication_status') == True:
                         st.error("Please enter a restaurant name.")
                     elif rest_time is None:
                         st.error("Please select a start time.")
+                    elif not (t_start <= reservation_date <= t_end):
+                        st.error(f"Error: Date must be within trip bounds ({t_start.strftime('%d/%m/%Y')} - {t_end.strftime('%d/%m/%Y')})")
                     else:
                         new_rest_item = {
+                            "date": str(reservation_date) ,
                             "name": rest_name.strip(),
                             "time": str(rest_time),
                             "duration": duration_hours,
@@ -2633,12 +2735,13 @@ elif st.session_state.get('authentication_status') == True:
                             "type": "restaurant"
                         }
                         
-                        day_str = str(day_key)
-                        if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                        if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
-                        if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
+                        target_day_str = str(reservation_date)
                         
-                        v_meta["days_metadata"][day_str]["schedule"].append(new_rest_item)
+                        if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
+                        if target_day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][target_day_str]: v_meta["days_metadata"][target_day_str]["schedule"] = []
+                        
+                        v_meta["days_metadata"][target_day_str]["schedule"].append(new_rest_item)
                         save_vacation_meta(v_meta)
                         st.success("Restaurant added successfully!")
                         st.rerun()
@@ -2684,6 +2787,17 @@ elif st.session_state.get('authentication_status') == True:
             st.markdown('<div class="focus-trap" tabindex="0"></div>', unsafe_allow_html=True)        
             day_str = str(day_key)
             
+            try:
+                t_start = datetime.strptime(v_meta.get("start_date", str(date.today())), "%Y-%m-%d").date()
+                t_end = datetime.strptime(v_meta.get("end_date", str(date.today() + timedelta(days=7))), "%Y-%m-%d").date()
+            except:
+                t_start, t_end = date.today(), date.today() + timedelta(days=7)
+
+            try:
+                def_res_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
+            except:
+                def_res_date = current_nav_date
+            
             state_key_needs = f"edit_needs_bk_{day_str}_{idx}"
             state_key_booked = f"edit_is_bk_{day_str}_{idx}"
             
@@ -2711,32 +2825,39 @@ elif st.session_state.get('authentication_status') == True:
             st.markdown("##### Edit Transit Details")
             
             try:
-                def_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
-            except:
-                def_date = datetime.strptime(day_str, "%Y-%m-%d").date()
-                
-            transit_date = st.date_input("Transit Date", value=def_date, format="DD/MM/YYYY", key=f"t_date_{day_str}_{idx}")
-            
-            try:
                 def_time = datetime.strptime(item.get('time', '10:00:00'), "%H:%M:%S").time()
             except:
                 def_time = datetime.strptime("10:00:00", "%H:%M:%S").time()
                 
-            transit_time = st.time_input("Departure Time", value=def_time, key=f"t_time_{day_str}_{idx}")
+            col_d, col_h, com_m = st.columns([1, 0.5, 0.5], vertical_alignment="center")
+            with col_d:
+                transit_date = st.date_input("Transit Date", value=def_res_date, format="DD/MM/YYYY", key=f"t_date_{day_str}_{idx}")
+            with col_h:
+                curr_hr_str = f"{def_time.hour:02d}"
+                hr_idx = hour_options.index(curr_hr_str) if curr_hr_str in hour_options else 0
+                transit_hour = st.selectbox("Hour", options=hour_options, index=hr_idx, key=f"t_hr_{day_str}_{idx}")
+            with com_m:
+                curr_min_str = f"{def_time.minute:02d}"
+                min_idx = minute_options.index(curr_min_str) if curr_min_str in minute_options else 0
+                transit_minute = st.selectbox("Minute", options=minute_options, index=min_idx, key=f"t_min_{day_str}_{idx}")
+
+            transit_time = time(int(transit_hour), int(transit_minute))
             
             curr_dur_val = float(item.get('duration', 1.0))
             def_hrs = int(curr_dur_val)
             def_mins = int(round((curr_dur_val - def_hrs) * 60))
-            valid_mins = [0, 15, 30, 45]
-            min_idx = valid_mins.index(def_mins) if def_mins in valid_mins else 0
 
             col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
             with col_lbl:
                 st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400; text-align: center;'>Duration:</div>", unsafe_allow_html=True)
                 
             dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"t_hrs_{day_str}_{idx}")
-            dur_mins = col_min.selectbox("minutes", options=valid_mins, index=min_idx, key=f"t_mins_{day_str}_{idx}")
-            transit_duration_hours = dur_hours + (dur_mins / 60.0)
+            
+            def_mins_str = f"{def_mins:02d}" if def_mins in range(60) else "00"
+            dur_min_idx = minute_options.index(def_mins_str) if def_mins_str in minute_options else 0
+            dur_mins = col_min.selectbox("minutes", options=minute_options, index=dur_min_idx, key=f"t_mins_{day_str}_{idx}")
+            
+            transit_duration_hours = int(dur_hours) + (int(dur_mins) / 60.0)
             
             st.divider()
             
@@ -2769,13 +2890,13 @@ elif st.session_state.get('authentication_status') == True:
             if save_clicked:
                 if not origin_desc.strip() or not dest_desc.strip():
                     st.error("Please enter both origin and destination descriptions.")
-                elif transit_time is None:
-                    st.error("Please select a departure time.")
+                elif not (t_start <= transit_date <= t_end):
+                    st.error(f"❌ Error: Date must be within trip bounds ({t_start.strftime('%d/%m/%Y')} - {t_end.strftime('%d/%m/%Y')})")
                 else:
                     target_day_str = str(transit_date)
                     
                     updated_transit_item = {
-                        "name": f"🚗 {origin_desc.strip()} ➔ {dest_desc.strip()}",
+                        "name": f"{origin_desc.strip()} ➔ {dest_desc.strip()}",
                         "date": target_day_str,
                         "time": str(transit_time),
                         "duration": transit_duration_hours,
@@ -2787,21 +2908,27 @@ elif st.session_state.get('authentication_status') == True:
                         "budget": transit_cost if (needs_booking and is_booked) else 0.0,
                         "needs_booking": needs_booking,
                         "booked": is_booked if needs_booking else False,
-                        "notes": transit_notes,
+                        "notes": transit_notes.strip(),
                         "type": "transit"
                     }
                     
                     if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                    if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
-                        if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
-                            v_meta["days_metadata"][day_str]["schedule"].pop(idx)
-                    
-                    if target_day_str not in v_meta["days_metadata"]: 
-                        v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
-                    if "schedule" not in v_meta["days_metadata"][target_day_str]: 
-                        v_meta["days_metadata"][target_day_str]["schedule"] = []
+
+                    if target_day_str != day_str:
+                        if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
+                            if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
+                                v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                        
+                        if target_day_str not in v_meta["days_metadata"]: 
+                            v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                        if "schedule" not in v_meta["days_metadata"][target_day_str]: 
+                            v_meta["days_metadata"][target_day_str]["schedule"] = []
                             
-                    v_meta["days_metadata"][target_day_str]["schedule"].append(updated_transit_item)
+                        v_meta["days_metadata"][target_day_str]["schedule"].append(updated_transit_item)
+                    else:
+                        if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
+                            if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
+                                v_meta["days_metadata"][day_str]["schedule"][idx] = updated_transit_item
                     
                     save_vacation_meta(v_meta)
                     
@@ -2826,21 +2953,63 @@ elif st.session_state.get('authentication_status') == True:
     @st.dialog("✏️ Edit Restaurant")
     def edit_restaurant_dialog(v_meta, day_key, idx, item):
         day_str = str(day_key)
+
+        try:
+            t_start = datetime.strptime(v_meta.get("start_date", str(date.today())), "%Y-%m-%d").date()
+            t_end = datetime.strptime(v_meta.get("end_date", str(date.today() + timedelta(days=7))), "%Y-%m-%d").date()
+        except:
+            t_start, t_end = date.today(), date.today() + timedelta(days=7)
+        
+        try:
+            def_res_date = datetime.strptime(item.get('date', day_str), "%Y-%m-%d").date()
+        except:
+            def_res_date = current_nav_date
+
         with st.form(f"edit_restaurant_form_{day_str}_{idx}"):
             rest_name = st.text_input("Restaurant Name", value=item.get('name', ''))
             
-            c_time, c_dur = st.columns(2)
             try:
                 def_time = datetime.strptime(item.get('time', '12:00:00'), "%H:%M:%S").time()
             except:
                 def_time = datetime.strptime("12:00:00", "%H:%M:%S").time()
 
-            start_time = c_time.time_input("Start Time", value=def_time)
-            rest_duration = c_dur.number_input("Duration (Hours)", min_value=0.25, max_value=12.0, value=float(item.get('duration', 1.5)), step=0.25)
+            col_d, col_h, com_m = st.columns([1, 0.5, 0.5], vertical_alignment="center")
+                            
+            with col_d:
+                reservation_date = st.date_input("Reservation Date", value=def_res_date, format="DD/MM/YYYY", key=f"edit_rest_date_{day_str}_{idx}")
+
+            with col_h:
+                curr_hr_str = f"{def_time.hour:02d}"
+                hr_idx = hour_options.index(curr_hr_str) if curr_hr_str in hour_options else 0
+                reservation_hour = st.selectbox("Hour", options=hour_options, index=hr_idx, key=f"edit_rest_hour_{day_str}_{idx}")
+
+            with com_m:
+                curr_min_str = f"{def_time.minute:02d}"
+                min_idx = minute_options.index(curr_min_str) if curr_min_str in minute_options else 0
+                reservation_minute = st.selectbox("Minute", options=minute_options, index=min_idx, key=f"edit_rest_min_{day_str}_{idx}")
+
+            rest_time = time(int(reservation_hour), int(reservation_minute))
+
+            col_lbl, col_hr, col_min = st.columns([0.4, 1, 1], vertical_alignment="center")
+                                        
+            with col_lbl:
+                st.markdown("<div style='margin-top: 10px; font-size: 0.85rem; font-weight: 400;'>Duration:</div>", unsafe_allow_html=True)  
+            current_val = float(item.get('duration', 1.0)) if 'item' in locals() and item else 1.0
+            def_hrs = int(current_val)
+            def_mins = int(round((current_val - def_hrs) * 60))
             
-            rest_coords = st.text_input("📍 Address", value=item.get('coords', ''))
-            is_booked = st.checkbox("✅ Table Booked / Reserved?", value=item.get('booked', False))
-            rest_notes = st.text_area("📝 Notes", value=item.get('notes', ''))
+            dur_hours = col_hr.number_input("hours", min_value=0, max_value=24, value=def_hrs, step=1, key=f"d_hrs_{id(item) if 'item' in locals() else 'add'}")
+            
+            def_mins_str = f"{def_mins:02d}" if def_mins in range(60) else "00"
+            min_index = minute_options.index(def_mins_str) if def_mins_str in minute_options else 0
+            
+            dur_mins = col_min.selectbox("minutes", options=minute_options, index=min_index, key=f"d_mins_{id(item) if 'item' in locals() else 'add'}")
+            
+            duration_hours = int(dur_hours) + (int(dur_mins) / 60.0)
+            
+            rest_coords = st.text_input("📍 Address", value=item.get('coords', ''), key=f"edit_rest_addr_{day_str}_{idx}")
+            is_booked = st.checkbox("✅ Table Booked / Reserved?", value=item.get('booked', False), key=f"edit_rest_book_{day_str}_{idx}")
+            rest_notes = st.text_area("📝 Notes", value=item.get('notes', ''), key=f"edit_rest_notes_{day_str}_{idx}")
             
             col_save, col_del = st.columns(2)
             with col_save:
@@ -2849,10 +3018,17 @@ elif st.session_state.get('authentication_status') == True:
                 delete_clicked = st.form_submit_button("Delete", use_container_width=True, type="secondary")
             
             if save_clicked:
+                target_day_str = str(reservation_date)
+
+                if not (t_start <= reservation_date <= t_end):
+                    st.error(f"❌ Error: Date must be within trip bounds ({t_start.strftime('%d/%m/%Y')} - {t_end.strftime('%d/%m/%Y')})")
+                    st.stop()
+
                 updated_item = {
+                    "date": target_day_str,
                     "name": rest_name.strip(),
-                    "time": str(start_time),
-                    "duration": rest_duration,
+                    "time": str(rest_time),
+                    "duration": duration_hours,
                     "coords": rest_coords.strip(),
                     "booked": is_booked,
                     "budget": 0.0,
@@ -2861,10 +3037,26 @@ elif st.session_state.get('authentication_status') == True:
                 }
 
                 if "days_metadata" not in v_meta: v_meta["days_metadata"] = {}
-                if day_str not in v_meta["days_metadata"]: v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
-                if "schedule" not in v_meta["days_metadata"][day_str]: v_meta["days_metadata"][day_str]["schedule"] = []
 
-                v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
+                if target_day_str != day_str:
+                    if day_str in v_meta["days_metadata"] and "schedule" in v_meta["days_metadata"][day_str]:
+                        if idx < len(v_meta["days_metadata"][day_str]["schedule"]):
+                            v_meta["days_metadata"][day_str]["schedule"].pop(idx)
+                    
+                    if target_day_str not in v_meta["days_metadata"]: 
+                        v_meta["days_metadata"][target_day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][target_day_str]: 
+                        v_meta["days_metadata"][target_day_str]["schedule"] = []
+                        
+                    v_meta["days_metadata"][target_day_str]["schedule"].append(updated_item)
+                else:
+                    if day_str not in v_meta["days_metadata"]: 
+                        v_meta["days_metadata"][day_str] = {"notes_list": [], "schedule": []}
+                    if "schedule" not in v_meta["days_metadata"][day_str]: 
+                        v_meta["days_metadata"][day_str]["schedule"] = []
+                        
+                    v_meta["days_metadata"][day_str]["schedule"][idx] = updated_item
+
                 save_vacation_meta(v_meta)
                 st.success("Updated successfully!")
                 st.rerun()
@@ -2876,6 +3068,92 @@ elif st.session_state.get('authentication_status') == True:
                         save_vacation_meta(v_meta)
                         st.success("Deleted successfully!")
                         st.rerun()
+
+    @st.dialog("Manage Flights")
+    def flights_dialog(vac_meta):
+        st.markdown("##### Add or Edit Flight Details")
+        
+        if "flights" not in vac_meta:
+            vac_meta["flights"] = []
+
+        def delete_flight_callback(flight_idx):
+            if "flights" in vac_meta and 0 <= flight_idx < len(vac_meta["flights"]):
+                vac_meta["flights"].pop(flight_idx)
+                save_vacation_meta(vac_meta)
+            
+        with st.form("add_flight_form"):
+            col1, col2 = st.columns(2)
+            flight_type = col1.selectbox("Flight Direction", ["Outbound", "Return", "Internal / Other"])
+            flight_num = col2.text_input("Flight Number (Optional)")
+            
+            col3, col4 = st.columns(2)
+            flight_date = col3.date_input("Outbound date", value=date.today(), format="DD/MM/YYYY")
+            
+            col_hr1, col_min1 = col4.columns(2)
+            dep_hour = col_hr1.selectbox("Hour", options = hour_options, index=10 , key="flight_dep_hr")
+            dep_min = col_min1.selectbox("Minute", options = minute_options, index=0, key="flight_dep_min")
+            
+            col5, col6 = st.columns(2)
+            arrival_date = col5.date_input("Arrival Date", value=date.today(), format="DD/MM/YYYY")
+            
+            col_hr2, col_min2 = col6.columns(2)
+            arr_hour = col_hr2.selectbox("Hour", options = hour_options, index=14, key="flight_arr_hr")
+            arr_min = col_min2.selectbox("Minute", options= minute_options, index=0, key="flight_arr_min")
+            
+            flight_price = st.number_input("Price (Optional)", min_value=0.0, value=0.0, step=100.0)
+            
+            if st.form_submit_button("Add Flight", use_container_width=True, type="primary"):
+                dep_time_str = f"{dep_hour}:{dep_min}"
+                arr_time_str = f"{arr_hour}:{arr_min}"
+                
+                f_num_clean = "| " + flight_num.strip() if flight_num.strip() else ""
+                
+                new_flight = {
+                    "type": flight_type,
+                    "flight_num": f_num_clean,
+                    "date": str(flight_date),
+                    "departure_time": dep_time_str,
+                    "arrival_date": str(arrival_date),
+                    "arrival_time": arr_time_str,
+                    "price": flight_price,
+                }
+                vac_meta["flights"].append(new_flight)
+                save_vacation_meta(vac_meta)
+                st.success("Flight added successfully!")
+
+        st.markdown("##### Current Flights")
+        
+        flights = vac_meta.get("flights", [])
+        if not flights:
+            st.info("No flights added yet.")
+        else:
+            for idx, f in enumerate(flights):
+                col_card, col_del = st.columns([0.94, 0.06], vertical_alignment="center")
+                
+                try:
+                    dep_date_formatted = datetime.strptime(f.get('date', ''), "%Y-%m-%d").strftime("%d/%m/%Y")
+                except:
+                    dep_date_formatted = f.get('date', '')
+                    
+                try:
+                    arr_date_formatted = datetime.strptime(f.get('arrival_date', ''), "%Y-%m-%d").strftime("%d/%m/%Y")
+                except:
+                    arr_date_formatted = f.get('arrival_date', '')
+
+                with col_card:
+                    st.markdown(f"""
+                        <div class="flight-card" style="margin-bottom: 0px;">
+                            <b>{f.get('type')}</b>  {f.get('flight_num')} <br>
+                            {dep_date_formatted} {f.get('departure_time')} ➔ {arr_date_formatted} {f.get('arrival_time')} | {f.get('price'):,.2f}₪  
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                with col_del:
+                    st.markdown("<div style='margin-top: 8px;'>", unsafe_allow_html=True)
+                    st.button("🗑️", key=f"del_flight_{idx}", use_container_width=True, help="Delete flight", on_click=delete_flight_callback, args=(idx,))
+                    st.markdown("</div>", unsafe_allow_html=True)
+                
+                st.write("")
 
     # ----------------------------------------------------
     # סרגל צד - בחירת וניהול פרויקטים
@@ -3490,6 +3768,9 @@ elif st.session_state.get('authentication_status') == True:
             elif st.session_state.get("open_dialog") == "expenses":
                 st.session_state["open_dialog"] = None
                 trip_expenses_dialog(project_folder, vac_meta)
+            elif st.session_state.get("open_dialog") == "flights":
+                st.session_state["open_dialog"] = None
+                flights_dialog(vac_meta)
 
             selected_countries = vac_meta.get("countries", [])
             if not selected_countries and "country" in vac_meta and vac_meta["country"] != "Select Country...":
@@ -3918,7 +4199,7 @@ elif st.session_state.get('authentication_status') == True:
                                     with c_info:
                                         st.markdown(f"""
                                             <div style='text-align: center;'>
-                                                <div style='font-size: 1.0rem; font-weight: 700;'>🍽️ {rest_name}</div>
+                                                <div style='font-size: 1.0rem; font-weight: 700;'>{rest_name}</div>
                                                 <div style='font-size: 0.75rem; opacity: 0.7; margin-bottom: 15px;'>{rest_notes}</div>
                                             </div>
                                         """, unsafe_allow_html=True)
@@ -4164,16 +4445,20 @@ elif st.session_state.get('authentication_status') == True:
                                     attraction_locations.append(loc.strip())
                             
                             if attraction_locations:
-                                origin = attraction_locations[0]
-                                destination = attraction_locations[-1] if len(attraction_locations) > 1 else attraction_locations[0]
-                                waypoints = attraction_locations[1:-1]
-                                
-                                base_dir_url = f"https://www.google.com/maps/dir/?api=1&origin={origin.replace(' ', '+')}&destination={destination.replace(' ', '+')}"
-                                if waypoints:
-                                    waypoints_str = "|".join([w.replace(' ', '+') for w in waypoints])
-                                    base_dir_url += f"&waypoints={waypoints_str}"
-                                
-                                gmaps_route_link = base_dir_url
+                                if len(attraction_locations) == 1:
+                                    single_target = attraction_locations[0]
+                                    gmaps_route_link = f"https://www.google.com/maps/search/?api=1&query={single_target.replace(' ', '+')}"
+                                else:
+                                    origin = attraction_locations[0]
+                                    destination = attraction_locations[-1]
+                                    waypoints = attraction_locations[1:-1]
+                                    
+                                    base_dir_url = f"https://www.google.com/maps/dir/?api=1&origin={origin.replace(' ', '+')}&destination={destination.replace(' ', '+')}"
+                                    if waypoints:
+                                        waypoints_str = "|".join([w.replace(' ', '+') for w in waypoints])
+                                        base_dir_url += f"&waypoints={waypoints_str}"
+                                    
+                                    gmaps_route_link = base_dir_url
                             else:
                                 fallback_target = active_hotel['address'] if (active_hotel and active_hotel.get('address')) else day_country
                                 gmaps_route_link = f"https://www.google.com/maps/search/?api=1&query={fallback_target.replace(' ', '+')}"
@@ -4218,11 +4503,11 @@ elif st.session_state.get('authentication_status') == True:
         # ------------------------------------------------
 
         elif current_project["type"] == "Hourly Wage Tracker":
-            st.info("Hourly Wage Tracker module will be built here!")
+            st.info("Under Development")
         
         # ------------------------------------------------
         # מודול חיסכון 
         # ------------------------------------------------
 
         elif current_project["type"] == "Goal-Based Savings":
-            st.info("Goal-Based Savings module will be built here!")
+            st.info("Under Development")
